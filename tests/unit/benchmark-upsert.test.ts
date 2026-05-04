@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 
 import { upsertBenchmarkRecords } from "@/lib/benchmarkSources";
 import type { NormalizedBenchmarkRecord } from "@/lib/benchmarkSources/types";

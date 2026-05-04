@@ -1,28 +1,29 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const limitMock = vi.fn();
+export {};
 
-vi.mock("@upstash/ratelimit", () => ({
+const mockLimit = jest.fn();
+
+jest.mock("@upstash/ratelimit", () => ({
   Ratelimit: class {
-    static slidingWindow = vi.fn((limit: number, window: string) => ({
+    static slidingWindow: jest.Mock = jest.fn((limit: number, window: string) => ({
       limit,
       window,
     }));
 
-    limit = limitMock;
+    limit = mockLimit;
 
     constructor(public readonly config: unknown) {}
   },
 }));
 
-vi.mock("@/lib/redis", () => ({
-  getRedis: vi.fn(() => ({ kind: "redis" })),
+jest.mock("@/lib/redis", () => ({
+  getRedis: jest.fn(() => ({ kind: "redis" })),
 }));
 
 describe("rate limiting", () => {
   beforeEach(() => {
-    vi.resetModules();
-    limitMock.mockReset();
+    jest.resetModules();
+    mockLimit.mockReset();
   });
 
   it("extracts the first forwarded IP address", async () => {
@@ -38,12 +39,12 @@ describe("rate limiting", () => {
   });
 
   it("throws the public rate limit error when Upstash denies the IP", async () => {
-    limitMock.mockResolvedValue({ success: false });
+    mockLimit.mockResolvedValue({ success: false });
     const { assertRateLimit } = await import("@/lib/rateLimit");
 
     await expect(assertRateLimit("203.0.113.10")).rejects.toThrow(
       "Rate limit exceeded. Try again later.",
     );
-    expect(limitMock).toHaveBeenCalledWith("203.0.113.10");
+    expect(mockLimit).toHaveBeenCalledWith("203.0.113.10");
   });
 });

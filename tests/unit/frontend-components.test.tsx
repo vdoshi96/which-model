@@ -1,6 +1,8 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+/**
+ * @jest-environment jsdom
+ */
+
+import { render, screen } from "@testing-library/react";
 
 import { BenchmarkBadge } from "@/components/BenchmarkBadge";
 import { ModelCard } from "@/components/ModelCard";
@@ -47,43 +49,34 @@ const recommendation: RankedModel = {
 
 describe("BenchmarkBadge", () => {
   it("renders a readable source label, score, and source-specific color", () => {
-    const html = renderToStaticMarkup(
-      createElement(BenchmarkBadge, {
-        score: 0.93,
-        source: "livebench",
-      }),
-    );
+    const { container } = render(<BenchmarkBadge score={0.93} source="livebench" />);
 
-    expect(html).toContain("LiveBench");
-    expect(html).toContain("0.93");
-    expect(html).toContain("border-success");
+    expect(screen.getByText(/LiveBench/)).toBeInTheDocument();
+    expect(screen.getByText(/0.93/)).toBeInTheDocument();
+    expect(container.innerHTML).toContain("border-success");
   });
 });
 
 describe("ModelCard", () => {
   it("shows rank, model identity, weighted score, benchmark badges, cost, and context", () => {
-    const html = renderToStaticMarkup(
-      createElement(ModelCard, {
-        recommendation,
-      }),
-    );
+    render(<ModelCard recommendation={recommendation} />);
 
-    expect(html).toContain("#1");
-    expect(html).toContain("Claude 3.5 Sonnet");
-    expect(html).toContain("Anthropic");
-    expect(html).toContain("0.91");
-    expect(html).toContain("LiveBench");
-    expect(html).toContain("LMSYS Arena");
-    expect(html).toContain("Artificial Analysis");
-    expect(html).not.toContain("HF Leaderboard");
-    expect(html).toContain("$3.00 / $15.00");
-    expect(html).toContain("200,000 tokens");
+    expect(screen.getByText("#1")).toBeInTheDocument();
+    expect(screen.getByText("Claude 3.5 Sonnet")).toBeInTheDocument();
+    expect(screen.getByText("Anthropic")).toBeInTheDocument();
+    expect(screen.getByText("0.91")).toBeInTheDocument();
+    expect(screen.getByText(/LiveBench/)).toBeInTheDocument();
+    expect(screen.getByText(/LMSYS Arena/)).toBeInTheDocument();
+    expect(screen.getByText(/Artificial Analysis/)).toBeInTheDocument();
+    expect(screen.queryByText(/HF Leaderboard/)).not.toBeInTheDocument();
+    expect(screen.getByText("$3.00 / $15.00")).toBeInTheDocument();
+    expect(screen.getByText("200,000 tokens")).toBeInTheDocument();
   });
 
   it("renders unknown cost and context without empty gaps", () => {
-    const html = renderToStaticMarkup(
-      createElement(ModelCard, {
-        recommendation: {
+    render(
+      <ModelCard
+        recommendation={{
           ...recommendation,
           model: {
             ...recommendation.model,
@@ -91,12 +84,12 @@ describe("ModelCard", () => {
             costInputPer1M: null,
             costOutputPer1M: null,
           },
-        },
-      }),
+        }}
+      />,
     );
 
-    expect(html).toContain("Cost unavailable");
-    expect(html).toContain("Context unavailable");
+    expect(screen.getByText("Cost unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Context unavailable")).toBeInTheDocument();
   });
 });
 
@@ -111,13 +104,9 @@ describe("RankingList", () => {
       },
     }));
 
-    const html = renderToStaticMarkup(
-      createElement(RankingList, {
-        recommendations,
-      }),
-    );
+    render(<RankingList recommendations={recommendations} />);
 
-    expect(html).toContain("Model 10");
-    expect(html).not.toContain("Model 11");
+    expect(screen.getByText("Model 10")).toBeInTheDocument();
+    expect(screen.queryByText("Model 11")).not.toBeInTheDocument();
   });
 });

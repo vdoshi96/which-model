@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 
 import { buildDimensionScores, rankModels } from "@/lib/scoring";
 

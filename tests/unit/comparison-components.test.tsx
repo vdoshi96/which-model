@@ -1,6 +1,8 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+/**
+ * @jest-environment jsdom
+ */
+
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { ModelSelector } from "@/components/ModelSelector";
@@ -53,62 +55,72 @@ const taskDimensions: TaskDimensions = {
 
 describe("ModelSelector", () => {
   it("communicates min/max selection state and disables unselected options at the limit", () => {
-    const html = renderToStaticMarkup(
-      createElement(ModelSelector, {
-        models: ["Claude 3.5 Sonnet", "GPT-4o", "Gemini 1.5 Pro"],
-        onChange: () => undefined,
-        selectedModels: [
+    render(
+      <ModelSelector
+        models={["Claude 3.5 Sonnet", "GPT-4o", "Gemini 1.5 Pro"]}
+        onChange={() => undefined}
+        selectedModels={[
           "Claude 3.5 Sonnet",
           "GPT-4o",
           "DeepSeek V3",
           "Llama 3.1 405B",
           "Mistral Large",
-        ],
-      }),
+        ]}
+      />,
     );
 
-    expect(html).toContain("5 of 5 selected");
-    expect(html).toContain("Maximum reached");
-    expect(html).toContain("disabled");
+    expect(screen.getByText("5 of 5 selected")).toBeInTheDocument();
+    expect(screen.getByText(/Maximum reached/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Gemini 1.5 Pro")).toBeDisabled();
   });
 
   it("shows guidance when fewer than two models are selected", () => {
-    const html = renderToStaticMarkup(
-      createElement(ModelSelector, {
-        models: ["Claude 3.5 Sonnet", "GPT-4o"],
-        onChange: () => undefined,
-        selectedModels: ["Claude 3.5 Sonnet"],
-      }),
+    render(
+      <ModelSelector
+        models={["Claude 3.5 Sonnet", "GPT-4o"]}
+        onChange={() => undefined}
+        selectedModels={["Claude 3.5 Sonnet"]}
+      />,
     );
 
-    expect(html).toContain("Select at least 2 models");
+    expect(screen.getByText(/Select at least 2 models/)).toBeInTheDocument();
+  });
+
+  it("filters options by model name", () => {
+    render(
+      <ModelSelector
+        models={["Claude 3.5 Sonnet", "GPT-4o", "Gemini 1.5 Pro"]}
+        onChange={() => undefined}
+        selectedModels={[]}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Search by model name..."), {
+      target: { value: "gemini" },
+    });
+
+    expect(screen.getByText("Gemini 1.5 Pro")).toBeInTheDocument();
+    expect(screen.queryByText("Claude 3.5 Sonnet")).not.toBeInTheDocument();
   });
 });
 
 describe("ComparisonTable", () => {
   it("highlights the weighted-score winner and renders missing data as N/A", () => {
-    const html = renderToStaticMarkup(
-      createElement(ComparisonTable, {
-        dimensions: taskDimensions,
-        models: comparedModels,
-      }),
-    );
+    render(<ComparisonTable dimensions={taskDimensions} models={comparedModels} />);
 
-    expect(html).toContain("Winner");
-    expect(html).toContain("91.2");
-    expect(html).toContain("N/A");
-    expect(html).toContain("Reasoning");
-    expect(html).toContain("Cost / 1M input");
-    expect(html).toContain("Context window");
+    expect(screen.getByText("Winner")).toBeInTheDocument();
+    expect(screen.getByText("91.2")).toBeInTheDocument();
+    expect(screen.getAllByText("N/A")).toHaveLength(3);
+    expect(screen.getByText("Reasoning")).toBeInTheDocument();
+    expect(screen.getByText("Cost / 1M input")).toBeInTheDocument();
+    expect(screen.getByText("Context window")).toBeInTheDocument();
   });
 
   it("uses mobile horizontal scrolling and score color classes", () => {
-    const html = renderToStaticMarkup(
-      createElement(ComparisonTable, {
-        dimensions: taskDimensions,
-        models: comparedModels,
-      }),
+    const { container } = render(
+      <ComparisonTable dimensions={taskDimensions} models={comparedModels} />,
     );
+    const html = container.innerHTML;
 
     expect(html).toContain("overflow-x-auto");
     expect(html).toContain("text-success");
