@@ -7,7 +7,7 @@
 `agent/005-comparison`
 
 ## PR Link
-Pending
+https://github.com/vdoshi96/which-model/pull/5
 
 ## Responsibilities
 - Implemented `ModelSelector` as a controlled searchable multi-select with 2-model guidance and 5-model maximum enforcement.
