@@ -1,26 +1,23 @@
 import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 import { getPrisma } from "@/lib/db";
-
-const signupSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(3)
-    .max(20)
-    .regex(/^[A-Za-z0-9_]+$/),
-  password: z.string().min(8).regex(/\d/),
-});
+import { getAuthFieldErrors, signUpSchema } from "@/lib/validators/auth";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const parsed = signupSchema.safeParse(body);
+  const parsed = signUpSchema.safeParse(body);
 
   if (!parsed.success) {
-    return Response.json({ error: "Invalid signup details." }, { status: 400 });
+    return Response.json(
+      {
+        error: "Invalid signup details.",
+        fieldErrors: getAuthFieldErrors(parsed.error),
+      },
+      { status: 400 },
+    );
   }
 
   const username = parsed.data.username;
@@ -33,12 +30,27 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-  await getPrisma().user.create({
-    data: {
-      username,
-      passwordHash,
-    },
-  });
+  try {
+    await getPrisma().user.create({
+      data: {
+        username,
+        passwordHash,
+      },
+      select: { id: true, username: true },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return Response.json(
+        { error: "Username is already taken." },
+        { status: 409 },
+      );
+    }
+
+    throw error;
+  }
 
   return Response.json({ ok: true }, { status: 201 });
 }
