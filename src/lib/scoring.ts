@@ -1,4 +1,19 @@
-import type { BenchmarkScore, RankedModel, TaskDimensions } from "@/types/model";
+import type {
+  BenchmarkDimension,
+  BenchmarkScore,
+  RankedModel,
+  TaskDimensions,
+} from "@/types/model";
+
+export const BENCHMARK_DIMENSIONS: BenchmarkDimension[] = [
+  "reasoning",
+  "coding",
+  "math",
+  "instruction_following",
+  "overall",
+  "speed",
+  "cost_efficiency",
+];
 
 export interface ScoreableModel {
   name: string;
@@ -15,17 +30,46 @@ export function calculateWeightedScore(
 ): number {
   let weightedScore = 0;
   let totalWeight = 0;
+  const dimensionScores = buildDimensionScores(benchmarks);
 
-  for (const benchmark of benchmarks) {
-    const weight = dimensions[benchmark.dimension] ?? 0;
+  for (const dimension of BENCHMARK_DIMENSIONS) {
+    const score = dimensionScores[dimension];
+    const weight = dimensions[dimension] ?? 0;
 
-    if (weight > 0) {
-      weightedScore += weight * benchmark.score;
+    if (score !== null && weight > 0) {
+      weightedScore += weight * score;
       totalWeight += weight;
     }
   }
 
   return totalWeight === 0 ? 0 : weightedScore / totalWeight;
+}
+
+export function buildDimensionScores(
+  benchmarks: BenchmarkScore[],
+): Record<BenchmarkDimension, number | null> {
+  const scores = Object.fromEntries(
+    BENCHMARK_DIMENSIONS.map((dimension) => [dimension, null]),
+  ) as Record<BenchmarkDimension, number | null>;
+  const counts = Object.fromEntries(
+    BENCHMARK_DIMENSIONS.map((dimension) => [dimension, 0]),
+  ) as Record<BenchmarkDimension, number>;
+
+  for (const benchmark of benchmarks) {
+    scores[benchmark.dimension] =
+      (scores[benchmark.dimension] ?? 0) + benchmark.score;
+    counts[benchmark.dimension] += 1;
+  }
+
+  for (const dimension of BENCHMARK_DIMENSIONS) {
+    const score = scores[dimension];
+
+    if (score !== null) {
+      scores[dimension] = score / counts[dimension];
+    }
+  }
+
+  return scores;
 }
 
 export function rankModels(

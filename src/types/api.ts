@@ -22,7 +22,7 @@ export interface CompareRequest {
 export interface ComparedModel {
   name: string;
   provider: string;
-  scores: Partial<Record<BenchmarkDimension, number>>;
+  scores: Record<BenchmarkDimension, number | null>;
   weightedScore: number;
   costInputPer1M: number | null;
   contextWindow: number | null;

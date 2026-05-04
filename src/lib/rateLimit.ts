@@ -4,6 +4,13 @@ import { getRedis } from "@/lib/redis";
 
 let limiter: Ratelimit | null = null;
 
+export class RateLimitError extends Error {
+  constructor(message = "Rate limit exceeded. Try again later.") {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
 export function getClientIp(request: Request): string {
   const forwardedFor = request.headers.get("x-forwarded-for");
   return forwardedFor?.split(",")[0]?.trim() || "127.0.0.1";
@@ -22,9 +29,9 @@ export function getRateLimiter(): Ratelimit {
 }
 
 export async function assertRateLimit(ipAddress: string): Promise<void> {
-  const result = await getRateLimiter().limit(`recommend:${ipAddress}`);
+  const result = await getRateLimiter().limit(ipAddress);
 
   if (!result.success) {
-    throw new Error("Rate limit exceeded. Try again later.");
+    throw new RateLimitError();
   }
 }
