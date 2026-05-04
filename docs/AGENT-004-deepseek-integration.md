@@ -7,7 +7,7 @@
 `agent/004-deepseek-integration`
 
 ## PR Link
-Pending
+https://github.com/vdoshi96/which-model/pull/4
 
 ## Responsibilities
 - Implemented direct DeepSeek task interpretation via the OpenAI SDK using `deepseek-chat`, `DEEPSEEK_API_KEY`, and `DEEPSEEK_BASE_URL`.
@@ -56,5 +56,4 @@ Pending
 - AGENT-003 benchmark pipeline and Prisma score ingestion.
 
 ## Open Issues
-- PR link pending.
 - No real DeepSeek call was made; tests mock the SDK as required.
