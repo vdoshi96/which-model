@@ -7,7 +7,7 @@
 `agent/006-frontend`
 
 ## PR Link
-Pending
+https://github.com/vdoshi96/which-model/pull/6
 
 ## Responsibilities
 - Implemented the dark-mode-first frontend surface using the required CSS variables, Inter body font, and IBM Plex Mono for headings, model names, and scores.
