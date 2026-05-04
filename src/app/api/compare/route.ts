@@ -82,6 +82,14 @@ export async function POST(request: Request) {
     where: { name: { in: parsed.data.modelNames } },
     include: { scores: true },
   });
+
+  if (models.length !== parsed.data.modelNames.length) {
+    return Response.json(
+      { error: "One or more requested models were not found." },
+      { status: 404 },
+    );
+  }
+
   const response = {
     taskSummary: interpretation.summary,
     dimensions: interpretation.dimensions,

@@ -1,13 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const createMock = vi.fn();
+export {};
 
-vi.mock("openai", () => ({
-  default: vi.fn().mockImplementation(function MockOpenAI() {
+const mockCreate = jest.fn();
+
+jest.mock("openai", () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(function MockOpenAI() {
     return {
       chat: {
         completions: {
-          create: createMock,
+          create: mockCreate,
         },
       },
     };
@@ -16,14 +18,14 @@ vi.mock("openai", () => ({
 
 describe("interpretTask", () => {
   beforeEach(() => {
-    vi.resetModules();
-    createMock.mockReset();
+    jest.resetModules();
+    mockCreate.mockReset();
     process.env.DEEPSEEK_API_KEY = "test-key";
     process.env.DEEPSEEK_BASE_URL = "https://api.deepseek.test";
   });
 
   it("sends the hardcoded classifier prompt and parses valid JSON", async () => {
-    createMock.mockResolvedValue({
+    mockCreate.mockResolvedValue({
       choices: [
         {
           message: {
@@ -63,7 +65,7 @@ describe("interpretTask", () => {
       },
       summary: "This task needs careful reasoning. Cost matters a little.",
     });
-    expect(createMock).toHaveBeenCalledWith({
+    expect(mockCreate).toHaveBeenCalledWith({
       model: "deepseek-chat",
       max_tokens: 300,
       response_format: { type: "json_object" },
@@ -78,7 +80,7 @@ describe("interpretTask", () => {
   });
 
   it("caps user input at 500 characters before sending to DeepSeek", async () => {
-    createMock.mockResolvedValue({
+    mockCreate.mockResolvedValue({
       choices: [
         {
           message: {
@@ -94,12 +96,12 @@ describe("interpretTask", () => {
     const { interpretTask } = await import("@/lib/deepseek");
     await interpretTask("x".repeat(600));
 
-    const call = createMock.mock.calls[0]?.[0];
+    const call = mockCreate.mock.calls[0]?.[0];
     expect(call.messages[1].content).toBe(`Task: ${"x".repeat(500)}`);
   });
 
   it("rejects malformed DeepSeek JSON", async () => {
-    createMock.mockResolvedValue({
+    mockCreate.mockResolvedValue({
       choices: [{ message: { content: "{\"refused\":false}" } }],
     });
 
