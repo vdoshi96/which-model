@@ -61,11 +61,15 @@ export function getNumber(row: SourceRow, keys: string[]): number | undefined {
   return undefined;
 }
 
-export async function fetchText(url: string): Promise<string> {
+export async function fetchText(
+  url: string,
+  headers: HeadersInit = {},
+): Promise<string> {
   const response = await fetch(url, {
     headers: {
       accept: "application/json,text/csv,text/html;q=0.9,*/*;q=0.8",
       "user-agent": "which-model-benchmark-refresh/1.0",
+      ...headers,
     },
     next: { revalidate: 0 },
   });
@@ -77,8 +81,11 @@ export async function fetchText(url: string): Promise<string> {
   return response.text();
 }
 
-export async function fetchJson(url: string): Promise<unknown> {
-  const text = await fetchText(url);
+export async function fetchJson(
+  url: string,
+  headers: HeadersInit = {},
+): Promise<unknown> {
+  const text = await fetchText(url, headers);
   return JSON.parse(text) as unknown;
 }
 

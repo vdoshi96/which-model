@@ -15,11 +15,11 @@ import {
   type SourceRow,
 } from "./sourceUtils";
 
-const jsonCandidates = [
-  "https://artificialanalysis.ai/api/models",
-  "https://artificialanalysis.ai/api/leaderboards/models",
-  "https://artificialanalysis.ai/api/v2/data/llm-leaderboard",
-  "https://artificialanalysis.ai/leaderboards/models/_next/data.json",
+const jsonCandidates: Array<{ url: string; requiresApiKey?: boolean }> = [
+  {
+    url: "https://artificialanalysis.ai/api/v2/data/llms/models",
+    requiresApiKey: true,
+  },
 ];
 
 const htmlCandidates = [
@@ -96,9 +96,22 @@ export async function fetchArtificialAnalysis(): Promise<
 }
 
 async function fetchArtificialAnalysisRows(): Promise<ArtificialAnalysisRow[]> {
-  for (const url of jsonCandidates) {
+  for (const candidate of jsonCandidates) {
     try {
-      const rows = extractArtificialRows(extractRows(await fetchJson(url)));
+      const apiKey = process.env.ARTIFICIAL_ANALYSIS_API_KEY;
+
+      if (candidate.requiresApiKey && !apiKey) {
+        continue;
+      }
+
+      const rows = extractArtificialRows(
+        extractRows(
+          await fetchJson(
+            candidate.url,
+            apiKey ? { "x-api-key": apiKey } : undefined,
+          ),
+        ),
+      );
 
       if (rows.length > 0) {
         return rows;
@@ -126,6 +139,13 @@ async function fetchArtificialAnalysisRows(): Promise<ArtificialAnalysisRow[]> {
 function extractArtificialRows(rows: SourceRow[]): ArtificialAnalysisRow[] {
   return rows
     .map((row): ArtificialAnalysisRow | null => {
+      if (row.deprecated === true) {
+        return null;
+      }
+
+      const creator = getObject(row, ["model_creator", "creator"]);
+      const evaluations = getObject(row, ["evaluations"]);
+      const pricing = getObject(row, ["pricing"]);
       const modelName = getString(row, [
         "model",
         "modelName",
@@ -139,57 +159,78 @@ function extractArtificialRows(rows: SourceRow[]): ArtificialAnalysisRow[] {
         return null;
       }
 
-      const costInputPer1M = getNumber(row, [
+      const costInputPer1M = getNumberFromRecords([row, pricing], [
         "inputCost",
         "input_cost",
         "inputPrice",
         "priceInput",
         "costInputPer1M",
+        "price_1m_input_tokens",
+        "price1mInputTokens",
       ]);
-      const costOutputPer1M = getNumber(row, [
+      const costOutputPer1M = getNumberFromRecords([row, pricing], [
         "outputCost",
         "output_cost",
         "outputPrice",
         "priceOutput",
         "costOutputPer1M",
+        "price_1m_output_tokens",
+        "price1mOutputTokens",
       ]);
       const blendedCost =
-        getNumber(row, [
+        getNumberFromRecords([row, pricing], [
           "blendedCost",
           "cost",
           "price",
           "medianCost",
           "usdPerMillionTokens",
+          "price_1m_blended_3_to_1",
+          "price1mBlended0To3To1",
+          "price1mBlended7To2To1",
+          "price1mBlended0To1To1",
         ]) ?? averageDefined(costInputPer1M, costOutputPer1M);
 
       return {
         modelName,
         provider: inferProvider(
           modelName,
-          getString(row, ["provider", "creator", "organization", "lab"]),
+          getStringFromRecords([row, creator], [
+            "provider",
+            "creator",
+            "organization",
+            "lab",
+            "modelCreatorName",
+            "name",
+          ]),
         ),
-        qualityScore: getNumber(row, [
+        qualityScore: getNumberFromRecords([row, evaluations], [
           "quality",
           "qualityScore",
           "quality_score",
           "intelligence",
+          "intelligenceIndex",
+          "artificial_analysis_intelligence_index",
           "overall",
           "score",
           "index",
         ]),
-        speed: getNumber(row, [
+        speed: getNumberFromRecords([row], [
           "tokensPerSecond",
           "tokens_per_second",
           "outputTokensPerSecond",
           "output_tokens_per_second",
+          "median_output_tokens_per_second",
+          "medianOutputTokensPerSecond",
           "speed",
           "tps",
         ]),
         cost: blendedCost,
         contextWindow:
-          getNumber(row, [
+          getNumberFromRecords([row], [
             "contextWindow",
             "context_window",
+            "context_window_tokens",
+            "contextWindowTokens",
             "context",
             "contextLength",
             "context_length",
@@ -208,7 +249,9 @@ function extractArtificialRows(rows: SourceRow[]): ArtificialAnalysisRow[] {
     });
 }
 
-function extractArtificialRowsFromHtml(html: string): ArtificialAnalysisRow[] {
+export function extractArtificialRowsFromHtml(
+  html: string,
+): ArtificialAnalysisRow[] {
   const jsonPayloads = Array.from(
     html.matchAll(
       /<script[^>]+(?:id="__NEXT_DATA__"|type="application\/json")[^>]*>([\s\S]*?)<\/script>/gi,
@@ -229,7 +272,41 @@ function extractArtificialRowsFromHtml(html: string): ArtificialAnalysisRow[] {
     }
   }
 
-  return [];
+  return extractArtificialRowsFromNextFlight(html);
+}
+
+function extractArtificialRowsFromNextFlight(
+  html: string,
+): ArtificialAnalysisRow[] {
+  const rows: ArtificialAnalysisRow[] = [];
+  const scripts = Array.from(
+    html.matchAll(/<script[^>]*>(self\.__next_f\.push\([\s\S]*?\))<\/script>/g),
+  ).map((match) => match[1]);
+
+  for (const script of scripts) {
+    const start = script.indexOf("(");
+    const end = script.lastIndexOf(")");
+
+    if (start === -1 || end === -1 || end <= start) {
+      continue;
+    }
+
+    try {
+      const payload = JSON.parse(script.slice(start + 1, end)) as unknown[];
+      const text = payload
+        .filter((value): value is string => typeof value === "string")
+        .join("");
+      const modelArrays = extractJsonArraysAfterKey(text, "\"models\":");
+
+      for (const modelArray of modelArrays) {
+        rows.push(...extractArtificialRows(extractRows(JSON.parse(modelArray))));
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return dedupeArtificialRows(rows);
 }
 
 function averageDefined(...values: Array<number | undefined>): number | undefined {
@@ -240,4 +317,135 @@ function averageDefined(...values: Array<number | undefined>): number | undefine
   }
 
   return defined.reduce((total, value) => total + value, 0) / defined.length;
+}
+
+function getObject(row: SourceRow, keys: string[]): SourceRow | undefined {
+  for (const key of keys) {
+    const value = row[key];
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value as SourceRow;
+    }
+  }
+
+  return undefined;
+}
+
+function getNumberFromRecords(
+  records: Array<SourceRow | undefined>,
+  keys: string[],
+): number | undefined {
+  for (const record of records) {
+    if (!record) {
+      continue;
+    }
+
+    const value = getNumber(record, keys);
+
+    if (value !== undefined) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function getStringFromRecords(
+  records: Array<SourceRow | undefined>,
+  keys: string[],
+): string | undefined {
+  for (const record of records) {
+    if (!record) {
+      continue;
+    }
+
+    const value = getString(record, keys);
+
+    if (value !== undefined) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function extractJsonArraysAfterKey(text: string, key: string): string[] {
+  const arrays: string[] = [];
+  let searchIndex = 0;
+
+  while (searchIndex < text.length) {
+    const keyIndex = text.indexOf(key, searchIndex);
+
+    if (keyIndex === -1) {
+      break;
+    }
+
+    const arrayStart = text.indexOf("[", keyIndex + key.length);
+
+    if (arrayStart === -1) {
+      break;
+    }
+
+    const arrayJson = extractJsonArrayAt(text, arrayStart);
+
+    if (arrayJson) {
+      arrays.push(arrayJson);
+      searchIndex = arrayStart + arrayJson.length;
+    } else {
+      searchIndex = arrayStart + 1;
+    }
+  }
+
+  return arrays;
+}
+
+function extractJsonArrayAt(text: string, start: number): string | null {
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+
+  for (let index = start; index < text.length; index += 1) {
+    const character = text[index];
+
+    if (quoted) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === "\"") {
+        quoted = false;
+      }
+
+      continue;
+    }
+
+    if (character === "\"") {
+      quoted = true;
+      continue;
+    }
+
+    if (character === "[") {
+      depth += 1;
+    } else if (character === "]") {
+      depth -= 1;
+
+      if (depth === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function dedupeArtificialRows(
+  rows: ArtificialAnalysisRow[],
+): ArtificialAnalysisRow[] {
+  const byModel = new Map<string, ArtificialAnalysisRow>();
+
+  for (const row of rows) {
+    byModel.set(`${row.provider}:${row.modelName}`, row);
+  }
+
+  return Array.from(byModel.values());
 }
