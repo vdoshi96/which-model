@@ -1,14 +1,9 @@
 import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { z } from "zod";
 
 import { getPrisma } from "@/lib/db";
-
-const credentialsSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1),
-});
+import { signInSchema } from "@/lib/validators/auth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -18,7 +13,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const parsed = credentialsSchema.safeParse(credentials);
+        const parsed = signInSchema.safeParse(credentials);
 
         if (!parsed.success) {
           return null;

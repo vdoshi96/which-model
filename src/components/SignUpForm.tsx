@@ -1,44 +1,42 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import {
+  type AuthFieldErrors,
+  getAuthFieldErrors,
+  signUpSchema,
+} from "@/lib/validators/auth";
 
 export function SignUpForm() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [fieldError, setFieldError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSignUp() {
-    const trimmedUsername = username.trim();
-
-    setFieldError("");
     setApiError("");
+    setFieldErrors({});
+    setConfirmPasswordError("");
 
-    if (!trimmedUsername || !password || !confirmPassword) {
-      setFieldError("All fields are required.");
+    const parsed = signUpSchema.safeParse({ username, password });
+
+    if (!parsed.success) {
+      setFieldErrors(getAuthFieldErrors(parsed.error));
       return;
     }
 
-    if (trimmedUsername.length < 3) {
-      setFieldError("Username must be at least 3 characters.");
-      return;
-    }
-
-    if (password.length < 8 || !/\d/.test(password)) {
-      setFieldError("Password must be 8+ characters and include a number.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setFieldError("Passwords do not match.");
+    if (parsed.data.password !== confirmPassword) {
+      setConfirmPasswordError("Passwords do not match.");
       return;
     }
 
@@ -48,18 +46,32 @@ export function SignUpForm() {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: trimmedUsername, password }),
+        body: JSON.stringify(parsed.data),
       });
 
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as
-          | { error?: string }
+          | { error?: string; fieldErrors?: AuthFieldErrors }
           | null;
+        setFieldErrors(data?.fieldErrors ?? {});
         setApiError(data?.error ?? "Could not create account.");
         return;
       }
 
-      router.push("/auth/signin");
+      const signInResult = await signIn("credentials", {
+        username: parsed.data.username,
+        password: parsed.data.password,
+        redirect: false,
+      });
+
+      if (signInResult?.error) {
+        setApiError("Account created. Please sign in.");
+        router.push("/auth/signin");
+        return;
+      }
+
+      router.push("/");
+      router.refresh();
     } catch {
       setApiError("Could not create account. Try again.");
     } finally {
@@ -89,13 +101,16 @@ export function SignUpForm() {
             autoComplete="username"
             onChange={(event) => {
               setUsername(event.target.value);
-              setFieldError("");
+              setFieldErrors({});
               setApiError("");
             }}
             placeholder="vishal"
             value={username}
           />
         </label>
+        {fieldErrors.username ? (
+          <p className="text-sm text-danger">{fieldErrors.username}</p>
+        ) : null}
         <label className="block space-y-2">
           <span className="font-mono text-xs uppercase text-secondary">
             Password
@@ -104,7 +119,7 @@ export function SignUpForm() {
             autoComplete="new-password"
             onChange={(event) => {
               setPassword(event.target.value);
-              setFieldError("");
+              setFieldErrors({});
               setApiError("");
             }}
             placeholder="At least 8 characters"
@@ -112,6 +127,9 @@ export function SignUpForm() {
             value={password}
           />
         </label>
+        {fieldErrors.password ? (
+          <p className="text-sm text-danger">{fieldErrors.password}</p>
+        ) : null}
         <label className="block space-y-2">
           <span className="font-mono text-xs uppercase text-secondary">
             Confirm password
@@ -120,7 +138,7 @@ export function SignUpForm() {
             autoComplete="new-password"
             onChange={(event) => {
               setConfirmPassword(event.target.value);
-              setFieldError("");
+              setConfirmPasswordError("");
               setApiError("");
             }}
             placeholder="Repeat password"
@@ -128,7 +146,9 @@ export function SignUpForm() {
             value={confirmPassword}
           />
         </label>
-        {fieldError ? <p className="text-sm text-danger">{fieldError}</p> : null}
+        {confirmPasswordError ? (
+          <p className="text-sm text-danger">{confirmPasswordError}</p>
+        ) : null}
         <Button className="w-full" disabled={isSubmitting} onClick={handleSignUp}>
           {isSubmitting ? "Creating account..." : "Sign up"}
         </Button>
