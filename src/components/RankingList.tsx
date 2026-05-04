@@ -10,14 +10,14 @@ export function RankingList({ recommendations }: RankingListProps) {
   if (recommendations.length === 0) {
     return (
       <div className="border border-border bg-surface p-6 text-secondary">
-        Recommendations will appear here after AGENT-004 connects the API.
+        Recommendations will appear here after you analyze a task.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {recommendations.map((recommendation) => (
+      {recommendations.slice(0, 10).map((recommendation) => (
         <ModelCard
           key={recommendation.model.name}
           recommendation={recommendation}
