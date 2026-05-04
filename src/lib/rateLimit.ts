@@ -16,6 +16,10 @@ export function getClientIp(request: Request): string {
   return forwardedFor?.split(",")[0]?.trim() || "127.0.0.1";
 }
 
+export function buildRateLimitKey(userId: string, ipAddress: string): string {
+  return `user:${userId}:ip:${ipAddress}`;
+}
+
 export function getRateLimiter(): Ratelimit {
   if (!limiter) {
     limiter = new Ratelimit({

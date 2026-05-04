@@ -39,4 +39,14 @@ describe("auth middleware", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("keeps the home page public so anonymous visitors can see the splash screen", async () => {
+    mockGetToken.mockResolvedValue(null);
+    const { middleware } = await import("@/middleware");
+
+    const response = await middleware(new NextRequest("http://localhost/"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
 });

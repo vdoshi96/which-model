@@ -2,12 +2,20 @@
 export {};
 
 const mockLimit = jest.fn();
+const mockAuth = jest.fn();
 const mockInterpretTask = jest.fn();
 const mockModelFindMany = jest.fn();
 const mockQueryCreate = jest.fn();
 
+jest.mock("@/lib/auth", () => ({
+  auth: mockAuth,
+}));
+
 jest.mock("@/lib/rateLimit", () => ({
   assertRateLimit: mockLimit,
+  buildRateLimitKey: jest.fn(
+    (userId: string, ipAddress: string) => `user:${userId}:ip:${ipAddress}`,
+  ),
   getClientIp: jest.fn(() => "203.0.113.10"),
   RateLimitError: class RateLimitError extends Error {},
 }));
@@ -26,6 +34,13 @@ jest.mock("@/lib/db", () => ({
 describe("recommend and compare API routes", () => {
   beforeEach(() => {
     jest.resetModules();
+    mockAuth.mockReset().mockResolvedValue({
+      user: {
+        id: "user_1",
+        isAdmin: false,
+        username: "valid_user",
+      },
+    });
     mockLimit.mockReset().mockResolvedValue(undefined);
     mockInterpretTask.mockReset().mockResolvedValue({
       refused: false,
@@ -60,6 +75,25 @@ describe("recommend and compare API routes", () => {
     mockQueryCreate.mockReset().mockResolvedValue({});
   });
 
+  it("rejects recommendation requests when the user is not signed in", async () => {
+    mockAuth.mockResolvedValue(null);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({ task: "Pick a coding model." }),
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      error: "Sign in to ask questions.",
+    });
+    expect(mockLimit).not.toHaveBeenCalled();
+    expect(mockInterpretTask).not.toHaveBeenCalled();
+  });
+
   it("returns ranked recommendations and logs the query", async () => {
     const { POST } = await import("@/app/api/recommend/route");
 
@@ -82,10 +116,12 @@ describe("recommend and compare API routes", () => {
         },
       ],
     });
+    expect(mockLimit).toHaveBeenCalledWith("user:user_1:ip:203.0.113.10");
     expect(mockQueryCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         taskText: "Pick a model for legal reasoning.",
         ipAddress: "203.0.113.10",
+        userId: "user_1",
       }),
     });
   });
@@ -122,6 +158,28 @@ describe("recommend and compare API routes", () => {
         }),
       ]),
     });
+  });
+
+  it("lets the admin request recommendations without consuming rate limit quota", async () => {
+    mockAuth.mockResolvedValue({
+      user: {
+        id: "admin",
+        isAdmin: true,
+        username: "admin",
+      },
+    });
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({ task: "Pick a coding model." }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockLimit).not.toHaveBeenCalled();
+    expect(mockInterpretTask).toHaveBeenCalled();
   });
 
   it("does not recommend models that have no usable benchmark scores", async () => {
@@ -336,6 +394,14 @@ describe("recommend and compare API routes", () => {
         where: { name: { in: ["Model A", "Model B"] } },
       }),
     );
+    expect(mockLimit).toHaveBeenCalledWith("user:user_1:ip:203.0.113.10");
+    expect(mockQueryCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        ipAddress: "203.0.113.10",
+        taskText: "Pick a reasoning model.",
+        userId: "user_1",
+      }),
+    });
   });
 
   it("compares catalog-only models with metadata and missing benchmark scores", async () => {

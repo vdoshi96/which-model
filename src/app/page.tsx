@@ -1,6 +1,14 @@
+import { SplashScreen } from "@/components/SplashScreen";
 import { TaskInput } from "@/components/TaskInput";
+import { auth } from "@/lib/auth";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth();
+
+  if (!session?.user) {
+    return <SplashScreen />;
+  }
+
   return (
     <section className="mx-auto flex min-h-[72vh] max-w-4xl flex-col justify-center gap-8">
       <div className="space-y-3">
