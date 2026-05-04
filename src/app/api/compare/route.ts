@@ -1,5 +1,3 @@
-import type { Prisma } from "@prisma/client";
-
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
 import { assertRateLimit, getClientIp, RateLimitError } from "@/lib/rateLimit";
@@ -15,6 +13,15 @@ const TEMPORARY_INTERPRETATION_ERROR =
   "Task interpretation is temporarily unavailable. Try again shortly.";
 
 export const runtime = "nodejs";
+
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+type JsonObject = { [key: string]: JsonValue };
 
 function logRouteError(message: string, ipAddress: string, error: unknown) {
   console.error(message, {
@@ -111,9 +118,13 @@ export async function POST(request: Request) {
     data: {
       taskText: parsed.data.task,
       ipAddress,
-      resultJson: response as unknown as Prisma.InputJsonValue,
+      resultJson: toJsonValue(response),
     },
   });
 
   return Response.json(response);
+}
+
+function toJsonValue(value: unknown): JsonObject {
+  return JSON.parse(JSON.stringify(value)) as JsonObject;
 }

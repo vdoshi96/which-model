@@ -1,5 +1,3 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-
 import { getPrisma } from "@/lib/db";
 
 import { fetchArtificialAnalysis } from "./artificialAnalysis";
@@ -58,8 +56,8 @@ type BenchmarkPrisma = {
   model: {
     upsert: (args: {
       where: { name: string };
-      create: Prisma.ModelCreateInput;
-      update: Prisma.ModelUpdateInput;
+      create: ModelCreateInput;
+      update: ModelUpdateInput;
     }) => Promise<{ id: string }>;
   };
   benchmarkScore: {
@@ -71,14 +69,43 @@ type BenchmarkPrisma = {
           dimension: string;
         };
       };
-      create: Prisma.BenchmarkScoreUncheckedCreateInput;
-      update: Prisma.BenchmarkScoreUpdateInput;
+      create: BenchmarkScoreCreateInput;
+      update: BenchmarkScoreUpdateInput;
     }) => Promise<unknown>;
   };
 };
 
+type ModelCreateInput = {
+  name: string;
+  provider: string;
+  contextWindow: number | null;
+  costInputPer1M: number | null;
+  costOutputPer1M: number | null;
+};
+
+type ModelUpdateInput = {
+  provider: string;
+  contextWindow?: number | null;
+  costInputPer1M?: number | null;
+  costOutputPer1M?: number | null;
+};
+
+type BenchmarkScoreCreateInput = {
+  modelId: string;
+  source: string;
+  dimension: string;
+  score: number;
+  rawLabel: string | null;
+};
+
+type BenchmarkScoreUpdateInput = {
+  score: number;
+  rawLabel: string | null;
+  fetchedAt: Date;
+};
+
 export async function refreshBenchmarkData(
-  prisma: PrismaClient = getPrisma(),
+  prisma: BenchmarkPrisma = getPrisma(),
 ): Promise<BenchmarkRefreshResult> {
   const records = await fetchAllBenchmarkSources();
 
@@ -141,8 +168,8 @@ export async function upsertBenchmarkRecords(
 
 function buildModelUpdate(
   record: NormalizedBenchmarkRecord,
-): Prisma.ModelUpdateInput {
-  const update: Prisma.ModelUpdateInput = {
+): ModelUpdateInput {
+  const update: ModelUpdateInput = {
     provider: record.provider,
   };
 
