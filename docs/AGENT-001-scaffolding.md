@@ -7,7 +7,7 @@
 `agent/001-scaffolding`
 
 ## PR Link
-Pending
+https://github.com/vdoshi96/which-model/pull/1
 
 ## Responsibilities
 - Initialize Next.js 14 project with App Router, TypeScript, Tailwind, pnpm
