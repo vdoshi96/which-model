@@ -225,13 +225,24 @@ function ComparePageContent() {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <h1 className="font-mono text-3xl font-semibold">Compare Models</h1>
-        <p className="mt-2 text-secondary">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
+          Comparison
+        </p>
+        <h1 className="font-mono text-3xl font-semibold sm:text-4xl">
+          Compare models
+        </h1>
+        <p className="max-w-2xl text-secondary">
           Select two to five models for a task-specific comparison.
         </p>
       </div>
 
-      <div className="space-y-3">
+      {error ? (
+        <div className="border border-danger bg-surface p-4 text-sm text-danger">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="space-y-3 border border-border bg-surface p-4">
         <label className="block space-y-2">
           <span className="font-mono text-sm text-secondary">
             Task description
@@ -249,7 +260,10 @@ function ComparePageContent() {
         <div className="flex flex-col gap-2 font-mono text-xs text-secondary sm:flex-row sm:items-center sm:justify-between">
           <span>{task.length}/500</span>
           {recommendationStatus === "Loading" ? (
-            <span>Loading top recommendations...</span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-3 w-3 animate-spin border border-accent border-t-transparent" />
+              Loading top recommendations...
+            </span>
           ) : null}
         </div>
       </div>
@@ -278,8 +292,6 @@ function ComparePageContent() {
           {comparisonStatus === "Loading" ? "Comparing..." : "Compare Models"}
         </Button>
       </div>
-
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <ComparisonTable
         dimensions={comparison?.dimensions}

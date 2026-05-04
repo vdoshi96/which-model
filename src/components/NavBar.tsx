@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { auth } from "@/lib/auth";
 
+import { SignOutButton } from "./SignOutButton";
 import { Button } from "./ui/Button";
 
 export async function NavBar() {
@@ -15,9 +16,12 @@ export async function NavBar() {
         </Link>
         <div className="flex items-center gap-3 text-sm">
           {session?.user ? (
-            <span className="font-mono text-secondary">
-              {session.user.username}
-            </span>
+            <>
+              <span className="max-w-32 truncate font-mono text-secondary sm:max-w-none">
+                {session.user.username}
+              </span>
+              <SignOutButton />
+            </>
           ) : (
             <>
               <Link className="text-secondary hover:text-primary" href="/auth/signin">

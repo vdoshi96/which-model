@@ -28,9 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${ibmPlexMono.variable}`}>
-      <body className="font-sans antialiased">
+      <body className="min-h-screen font-sans antialiased">
         <NavBar />
-        <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
+        <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">
+          {children}
+        </main>
       </body>
     </html>
   );

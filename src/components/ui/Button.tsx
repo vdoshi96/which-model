@@ -17,7 +17,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center border px-4 font-mono text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex min-h-10 items-center justify-center border px-4 py-2 font-mono text-sm font-medium leading-5 transition disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" &&
           "border-accent bg-accent text-black hover:bg-primary",
         variant === "secondary" &&
