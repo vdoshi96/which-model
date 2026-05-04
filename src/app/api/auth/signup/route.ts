@@ -1,5 +1,4 @@
 import bcrypt from "bcryptjs";
-import { Prisma } from "@prisma/client";
 
 import { getPrisma } from "@/lib/db";
 import { getAuthFieldErrors, signUpSchema } from "@/lib/validators/auth";
@@ -39,10 +38,7 @@ export async function POST(request: Request) {
       select: { id: true, username: true },
     });
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
+    if (isUniqueConstraintError(error)) {
       return Response.json(
         { error: "Username is already taken." },
         { status: 409 },
@@ -53,4 +49,13 @@ export async function POST(request: Request) {
   }
 
   return Response.json({ ok: true }, { status: 201 });
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  );
 }
