@@ -49,6 +49,7 @@ describe("signup API route", () => {
         username: "valid_user1",
         passwordHash: "hashed-password",
       },
+      select: { id: true, username: true },
     });
   });
 
@@ -81,7 +82,15 @@ describe("signup API route", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid signup details." });
+    expect(await response.json()).toEqual({
+      error: "Invalid signup details.",
+      fieldErrors: {
+        password:
+          "Password must be at least 8 characters and include at least one number.",
+        username:
+          "Username must be 3-20 characters and use only letters, numbers, or underscores.",
+      },
+    });
     expect(mockUserFindUnique).not.toHaveBeenCalled();
     expect(mockHash).not.toHaveBeenCalled();
   });
