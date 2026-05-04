@@ -40,6 +40,23 @@ describe("auth middleware", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("checks the secure Auth.js session cookie on HTTPS protected routes", async () => {
+    mockGetToken.mockResolvedValue({ sub: "admin" });
+    const { middleware } = await import("@/middleware");
+
+    const response = await middleware(
+      new NextRequest("https://which-model.vercel.app/compare"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockGetToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        secret: "test-secret",
+        secureCookie: true,
+      }),
+    );
+  });
+
   it("keeps the home page public so anonymous visitors can see the splash screen", async () => {
     mockGetToken.mockResolvedValue(null);
     const { middleware } = await import("@/middleware");
