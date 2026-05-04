@@ -7,7 +7,7 @@
 `agent/007-qa`
 
 ## PR Link
-Pending
+https://github.com/vdoshi96/which-model/pull/7
 
 ## Responsibilities
 - Migrated the test framework from Vitest to Jest with TypeScript config and `@testing-library/react`.
