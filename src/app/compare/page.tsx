@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/Input";
 import type {
   ApiError,
   CompareResponse,
+  ModelsResponse,
   RecommendResponse,
 } from "@/types/api";
 
@@ -60,6 +61,17 @@ function readStoredRecommendations() {
   }
 }
 
+async function fetchCatalogModelNames() {
+  const response = await fetch("/api/models");
+
+  if (!response.ok) {
+    throw new Error("Could not load model catalog.");
+  }
+
+  const payload = (await response.json()) as ModelsResponse;
+  return payload.models.map((model) => model.name);
+}
+
 function getErrorMessage(payload: unknown, fallback: string) {
   if (
     payload &&
@@ -102,6 +114,30 @@ function ComparePageContent() {
     setModelOptions(uniqueModelNames([...storedRecommendations, ...initialSelection]));
     setSelectedModels(initialSelection);
   }, [taskFromUrl, searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCatalogModels() {
+      try {
+        const catalogModelNames = await fetchCatalogModelNames();
+
+        if (!cancelled) {
+          setModelOptions((current) =>
+            uniqueModelNames([...current, ...catalogModelNames]),
+          );
+        }
+      } catch {
+        // Stored and recommendation-derived options still keep comparison usable.
+      }
+    }
+
+    void loadCatalogModels();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const trimmedTask = task.trim();

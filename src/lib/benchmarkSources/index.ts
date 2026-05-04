@@ -1,4 +1,5 @@
 import { getPrisma } from "@/lib/db";
+import { applyCatalogMetadata } from "@/lib/modelCatalog";
 
 import { fetchArtificialAnalysis } from "./artificialAnalysis";
 import { fetchHfLeaderboard } from "./hfLeaderboard";
@@ -120,16 +121,17 @@ export async function upsertBenchmarkRecords(
   let scoresUpserted = 0;
 
   for (const record of records) {
+    const enrichedRecord = applyCatalogMetadata(record);
     const model = await prisma.model.upsert({
-      where: { name: record.modelName },
+      where: { name: enrichedRecord.modelName },
       create: {
-        name: record.modelName,
-        provider: record.provider,
-        contextWindow: record.contextWindow ?? null,
-        costInputPer1M: record.costInputPer1M ?? null,
-        costOutputPer1M: record.costOutputPer1M ?? null,
+        name: enrichedRecord.modelName,
+        provider: enrichedRecord.provider,
+        contextWindow: enrichedRecord.contextWindow ?? null,
+        costInputPer1M: enrichedRecord.costInputPer1M ?? null,
+        costOutputPer1M: enrichedRecord.costOutputPer1M ?? null,
       },
-      update: buildModelUpdate(record),
+      update: buildModelUpdate(enrichedRecord),
     });
 
     touchedModels.add(model.id);
@@ -138,20 +140,20 @@ export async function upsertBenchmarkRecords(
       where: {
         modelId_source_dimension: {
           modelId: model.id,
-          source: record.source,
-          dimension: record.dimension,
+          source: enrichedRecord.source,
+          dimension: enrichedRecord.dimension,
         },
       },
       create: {
         modelId: model.id,
-        source: record.source,
-        dimension: record.dimension,
-        score: clampScore(record.score),
-        rawLabel: record.rawLabel ?? null,
+        source: enrichedRecord.source,
+        dimension: enrichedRecord.dimension,
+        score: clampScore(enrichedRecord.score),
+        rawLabel: enrichedRecord.rawLabel ?? null,
       },
       update: {
-        score: clampScore(record.score),
-        rawLabel: record.rawLabel ?? null,
+        score: clampScore(enrichedRecord.score),
+        rawLabel: enrichedRecord.rawLabel ?? null,
         fetchedAt: new Date(),
       },
     });

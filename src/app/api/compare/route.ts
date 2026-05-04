@@ -1,5 +1,6 @@
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
+import { findCatalogModel, type CuratedModel } from "@/lib/modelCatalog";
 import { assertRateLimit, getClientIp, RateLimitError } from "@/lib/rateLimit";
 import {
   BENCHMARK_DIMENSIONS,
@@ -33,6 +34,7 @@ type ComparedModelRecord = {
   provider: string;
   contextWindow: number | null;
   costInputPer1M: number | null;
+  costOutputPer1M: number | null;
   scores: ScoreRecord[];
 };
 
@@ -98,12 +100,40 @@ export async function POST(request: Request) {
   }
 
   const prisma = getPrisma();
+  const requestedCatalogModels = parsed.data.modelNames
+    .map((modelName) => findCatalogModel(modelName))
+    .filter((model): model is CuratedModel => model !== undefined);
+  const lookupNames = Array.from(
+    new Set([
+      ...parsed.data.modelNames,
+      ...requestedCatalogModels.map((model) => model.name),
+      ...requestedCatalogModels.flatMap((model) => [
+        ...(model.apiId ? [model.apiId] : []),
+        ...model.aliases,
+      ]),
+    ]),
+  );
   const models = (await prisma.model.findMany({
-    where: { name: { in: parsed.data.modelNames } },
+    where: { name: { in: lookupNames } },
     include: { scores: true },
   })) as ComparedModelRecord[];
+  const modelsByNormalizedName = buildModelLookup(models);
+  const resolvedModels = parsed.data.modelNames.map((modelName) => {
+    const catalogModel = findCatalogModel(modelName);
+    const model =
+      modelsByNormalizedName.get(normalizeModelName(modelName)) ??
+      (catalogModel
+        ? modelsByNormalizedName.get(normalizeModelName(catalogModel.name))
+        : undefined);
 
-  if (models.length !== parsed.data.modelNames.length) {
+    return { catalogModel, model, requestedName: modelName };
+  });
+
+  if (
+    resolvedModels.some(
+      (resolved) => resolved.model === undefined && resolved.catalogModel === undefined,
+    )
+  ) {
     return Response.json(
       { error: "One or more requested models were not found." },
       { status: 404 },
@@ -113,16 +143,20 @@ export async function POST(request: Request) {
   const response = {
     taskSummary: interpretation.summary,
     dimensions: interpretation.dimensions,
-    models: models.map((model) => {
-      const benchmarks = toBenchmarkScores(model.scores);
+    models: resolvedModels.map(({ catalogModel, model, requestedName }) => {
+      const benchmarks = toBenchmarkScores(model?.scores ?? []);
+      const name = catalogModel?.name ?? model?.name ?? requestedName;
 
       return {
-        name: model.name,
-        provider: model.provider,
+        name,
+        provider: model?.provider || catalogModel?.provider || "Unknown",
         scores: buildDimensionScores(benchmarks),
         weightedScore: calculateWeightedScore(benchmarks, interpretation.dimensions),
-        costInputPer1M: model.costInputPer1M,
-        contextWindow: model.contextWindow,
+        costInputPer1M:
+          model?.costInputPer1M ?? catalogModel?.costInputPer1M ?? null,
+        costOutputPer1M:
+          model?.costOutputPer1M ?? catalogModel?.costOutputPer1M ?? null,
+        contextWindow: model?.contextWindow ?? catalogModel?.contextWindow ?? null,
       };
     }),
   };
@@ -140,4 +174,32 @@ export async function POST(request: Request) {
 
 function toJsonValue(value: unknown): JsonObject {
   return JSON.parse(JSON.stringify(value)) as JsonObject;
+}
+
+function normalizeModelName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function buildModelLookup(models: ComparedModelRecord[]) {
+  const modelsByNormalizedName = new Map<string, ComparedModelRecord>();
+
+  for (const model of models) {
+    modelsByNormalizedName.set(normalizeModelName(model.name), model);
+
+    const catalogModel = findCatalogModel(model.name);
+
+    if (catalogModel) {
+      modelsByNormalizedName.set(normalizeModelName(catalogModel.name), model);
+
+      if (catalogModel.apiId) {
+        modelsByNormalizedName.set(normalizeModelName(catalogModel.apiId), model);
+      }
+
+      for (const alias of catalogModel.aliases) {
+        modelsByNormalizedName.set(normalizeModelName(alias), model);
+      }
+    }
+  }
+
+  return modelsByNormalizedName;
 }

@@ -25,6 +25,7 @@ export interface ComparedModel {
   scores: Record<BenchmarkDimension, number | null>;
   weightedScore: number;
   costInputPer1M: number | null;
+  costOutputPer1M?: number | null;
   contextWindow: number | null;
 }
 
@@ -32,4 +33,18 @@ export interface CompareResponse {
   taskSummary: string;
   dimensions: TaskDimensions;
   models: ComparedModel[];
+}
+
+export interface ModelCatalogItem {
+  name: string;
+  provider: string;
+  contextWindow: number | null;
+  costInputPer1M: number | null;
+  costOutputPer1M: number | null;
+  hasBenchmarks: boolean;
+  status: string;
+}
+
+export interface ModelsResponse {
+  models: ModelCatalogItem[];
 }
