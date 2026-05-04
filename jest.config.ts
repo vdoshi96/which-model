@@ -10,6 +10,8 @@ const config: Config = {
   setupFilesAfterEnv: ["<rootDir>/tests/jest.setup.ts"],
   testEnvironment: "node",
   testMatch: ["<rootDir>/tests/**/*.test.ts", "<rootDir>/tests/**/*.test.tsx"],
+  testPathIgnorePatterns: ["<rootDir>/.worktrees/", "<rootDir>/node_modules/"],
+  modulePathIgnorePatterns: ["<rootDir>/.worktrees/"],
   transform: {
     "^.+\\.(ts|tsx)$": [
       "ts-jest",
