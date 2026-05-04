@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  queries      Query[]
+}
+
+model Query {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  taskText   String
+  ipAddress  String
+  resultJson Json
+  createdAt  DateTime @default(now())
+}
+
+model Model {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  provider        String
+  contextWindow   Int?
+  costInputPer1M  Float?
+  costOutputPer1M Float?
+  scores          BenchmarkScore[]
+  updatedAt       DateTime         @updatedAt
+}
+
+model BenchmarkScore {
+  id        String   @id @default(cuid())
+  modelId   String
+  model     Model    @relation(fields: [modelId], references: [id])
+  source    String
+  dimension String
+  score     Float
+  rawLabel  String?
+  fetchedAt DateTime @default(now())
+
+  @@unique([modelId, source, dimension])
+}
