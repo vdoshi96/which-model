@@ -1,7 +1,13 @@
+import { auth } from "@/lib/auth";
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
 import { findCatalogModel, type CuratedModel } from "@/lib/modelCatalog";
-import { assertRateLimit, getClientIp, RateLimitError } from "@/lib/rateLimit";
+import {
+  assertRateLimit,
+  buildRateLimitKey,
+  getClientIp,
+  RateLimitError,
+} from "@/lib/rateLimit";
 import {
   BENCHMARK_DIMENSIONS,
   buildDimensionScores,
@@ -67,6 +73,12 @@ function toBenchmarkScores(
 }
 
 export async function POST(request: Request) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return Response.json({ error: "Sign in to ask questions." }, { status: 401 });
+  }
+
   const ipAddress = getClientIp(request);
   const body = await request.json().catch(() => null);
   const parsed = compareRequestSchema.safeParse(body);
@@ -75,15 +87,17 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid comparison request." }, { status: 400 });
   }
 
-  try {
-    await assertRateLimit(ipAddress);
-  } catch (error) {
-    if (error instanceof RateLimitError) {
-      return Response.json({ error: error.message }, { status: 429 });
-    }
+  if (!session.user.isAdmin) {
+    try {
+      await assertRateLimit(buildRateLimitKey(session.user.id, ipAddress));
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        return Response.json({ error: error.message }, { status: 429 });
+      }
 
-    logRouteError("Comparison rate limit check failed.", ipAddress, error);
-    return Response.json({ error: "Rate limit unavailable. Try again shortly." }, { status: 503 });
+      logRouteError("Comparison rate limit check failed.", ipAddress, error);
+      return Response.json({ error: "Rate limit unavailable. Try again shortly." }, { status: 503 });
+    }
   }
 
   let interpretation;
@@ -165,6 +179,7 @@ export async function POST(request: Request) {
     data: {
       taskText: parsed.data.task,
       ipAddress,
+      userId: session.user.isAdmin ? undefined : session.user.id,
       resultJson: toJsonValue(response),
     },
   });

@@ -7,6 +7,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BenchmarkBadge } from "@/components/BenchmarkBadge";
 import { ModelCard } from "@/components/ModelCard";
 import { RankingList } from "@/components/RankingList";
+import { SplashScreen } from "@/components/SplashScreen";
 import { TaskInput } from "@/components/TaskInput";
 import type { RankedModel } from "@/types/model";
 
@@ -153,5 +154,17 @@ describe("TaskInput", () => {
     expect(
       screen.queryByText(/Run a recommendation once to populate model choices/),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("SplashScreen", () => {
+  it("explains username/password signup and shows mock test-run artifacts", () => {
+    render(<SplashScreen />);
+
+    expect(screen.getByText(/No email required/i)).toBeInTheDocument();
+    expect(screen.getByText(/username and password/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Mock test run/i)).toHaveLength(2);
+    expect(screen.getByText(/Legal reasoning summary/i)).toBeInTheDocument();
+    expect(screen.getByText(/Coding agent comparison/i)).toBeInTheDocument();
   });
 });

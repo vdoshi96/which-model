@@ -5,6 +5,8 @@ import { getAuthFieldErrors, signUpSchema } from "@/lib/validators/auth";
 
 export const runtime = "nodejs";
 
+const RESERVED_USERNAMES = new Set(["admin"]);
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = signUpSchema.safeParse(body);
@@ -20,6 +22,11 @@ export async function POST(request: Request) {
   }
 
   const username = parsed.data.username;
+
+  if (RESERVED_USERNAMES.has(username.toLowerCase())) {
+    return Response.json({ error: "Username is reserved." }, { status: 409 });
+  }
+
   const existingUser = await getPrisma().user.findUnique({
     where: { username },
   });

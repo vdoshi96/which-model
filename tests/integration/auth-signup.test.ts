@@ -71,6 +71,24 @@ describe("signup API route", () => {
     expect(mockUserCreate).not.toHaveBeenCalled();
   });
 
+  it("rejects the reserved admin username", async () => {
+    const { POST } = await import("@/app/api/auth/signup/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({ username: "admin", password: "password1" }),
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "Username is reserved.",
+    });
+    expect(mockUserFindUnique).not.toHaveBeenCalled();
+    expect(mockUserCreate).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid username and password inputs before DB access", async () => {
     const { POST } = await import("@/app/api/auth/signup/route");
 
