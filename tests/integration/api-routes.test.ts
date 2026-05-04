@@ -90,6 +90,128 @@ describe("recommend and compare API routes", () => {
     });
   });
 
+  it("returns catalog and benchmark-backed models from the model catalog API", async () => {
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "Benchmark Only Model",
+        provider: "Bench Labs",
+        contextWindow: 64000,
+        costInputPer1M: 0.4,
+        costOutputPer1M: 1.2,
+        scores: [{ id: "score-1" }],
+      },
+    ]);
+    const { GET } = await import("@/app/api/models/route");
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      models: expect.arrayContaining([
+        expect.objectContaining({
+          name: "Benchmark Only Model",
+          hasBenchmarks: true,
+        }),
+        expect.objectContaining({
+          name: "Claude Sonnet 4.6",
+          provider: "Anthropic",
+          contextWindow: 1_000_000,
+          costInputPer1M: 3,
+          costOutputPer1M: 15,
+          hasBenchmarks: false,
+        }),
+      ]),
+    });
+  });
+
+  it("does not recommend models that have no usable benchmark scores", async () => {
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "Catalog Only",
+        provider: "Provider",
+        contextWindow: 128000,
+        costInputPer1M: 1,
+        costOutputPer1M: 2,
+        scores: [],
+      },
+      {
+        name: "Benchmarked Model",
+        provider: "Provider",
+        contextWindow: 128000,
+        costInputPer1M: 1,
+        costOutputPer1M: 2,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "reasoning",
+            score: 0.8,
+            rawLabel: null,
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({ task: "Pick a reasoning model." }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      recommendations: [
+        expect.objectContaining({
+          model: expect.objectContaining({ name: "Benchmarked Model" }),
+        }),
+      ],
+    });
+  });
+
+  it("uses live DB metadata before catalog metadata in recommendations", async () => {
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "gemini-2.5-flash",
+        provider: "Google Live",
+        contextWindow: 999999,
+        costInputPer1M: 9,
+        costOutputPer1M: 10,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "reasoning",
+            score: 0.8,
+            rawLabel: null,
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({ task: "Pick a reasoning model." }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      recommendations: [
+        expect.objectContaining({
+          model: expect.objectContaining({
+            name: "Gemini 2.5 Flash",
+            provider: "Google Live",
+            contextWindow: 999999,
+            costInputPer1M: 9,
+            costOutputPer1M: 10,
+          }),
+        }),
+      ],
+    });
+  });
+
   it("returns HTTP 400 when DeepSeek refuses the task", async () => {
     mockInterpretTask.mockResolvedValue({
       refused: true,
@@ -216,7 +338,24 @@ describe("recommend and compare API routes", () => {
     );
   });
 
-  it("rejects comparison when fewer than two requested models are found", async () => {
+  it("compares catalog-only models with metadata and missing benchmark scores", async () => {
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "Model A",
+        provider: "Provider",
+        contextWindow: 128000,
+        costInputPer1M: 1,
+        costOutputPer1M: 2,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "reasoning",
+            score: 0.9,
+            rawLabel: null,
+          },
+        ],
+      },
+    ]);
     const { POST } = await import("@/app/api/compare/route");
 
     const response = await POST(
@@ -224,7 +363,171 @@ describe("recommend and compare API routes", () => {
         method: "POST",
         body: JSON.stringify({
           task: "Pick a reasoning model.",
-          modelNames: ["Model A", "Missing Model"],
+          modelNames: ["Model A", "Claude Sonnet 4.6"],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      models: [
+        expect.objectContaining({
+          name: "Model A",
+          weightedScore: 0.9,
+        }),
+        expect.objectContaining({
+          name: "Claude Sonnet 4.6",
+          provider: "Anthropic",
+          contextWindow: 1_000_000,
+          costInputPer1M: 3,
+          weightedScore: 0,
+          scores: expect.objectContaining({
+            reasoning: null,
+            coding: null,
+          }),
+        }),
+      ],
+    });
+  });
+
+  it("uses alias-backed DB benchmark scores when comparing a catalog display name", async () => {
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "claude-sonnet-4-6",
+        provider: "Anthropic",
+        contextWindow: 1000000,
+        costInputPer1M: 3,
+        costOutputPer1M: 15,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "reasoning",
+            score: 0.95,
+            rawLabel: null,
+          },
+        ],
+      },
+      {
+        name: "Model B",
+        provider: "Provider",
+        contextWindow: 32000,
+        costInputPer1M: 0.5,
+        costOutputPer1M: 1,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "reasoning",
+            score: 0.7,
+            rawLabel: null,
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/compare/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/compare", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Pick a reasoning model.",
+          modelNames: ["Claude Sonnet 4.6", "Model B"],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      models: [
+        expect.objectContaining({
+          name: "Claude Sonnet 4.6",
+          provider: "Anthropic",
+          contextWindow: 1000000,
+          costInputPer1M: 3,
+          costOutputPer1M: 15,
+          scores: expect.objectContaining({ reasoning: 0.95 }),
+          weightedScore: 0.95,
+        }),
+        expect.objectContaining({
+          name: "Model B",
+          weightedScore: 0.7,
+        }),
+      ],
+    });
+  });
+
+  it("uses live DB metadata before catalog metadata in comparisons", async () => {
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "gemini-2.5-flash",
+        provider: "Google Live",
+        contextWindow: 999999,
+        costInputPer1M: 9,
+        costOutputPer1M: 10,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "reasoning",
+            score: 0.9,
+            rawLabel: null,
+          },
+        ],
+      },
+      {
+        name: "Model B",
+        provider: "Provider",
+        contextWindow: 32000,
+        costInputPer1M: 0.5,
+        costOutputPer1M: 1,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "reasoning",
+            score: 0.7,
+            rawLabel: null,
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/compare/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/compare", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Pick a reasoning model.",
+          modelNames: ["Gemini 2.5 Flash", "Model B"],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      models: [
+        expect.objectContaining({
+          name: "Gemini 2.5 Flash",
+          provider: "Google Live",
+          contextWindow: 999999,
+          costInputPer1M: 9,
+          costOutputPer1M: 10,
+          weightedScore: 0.9,
+        }),
+        expect.objectContaining({
+          name: "Model B",
+          weightedScore: 0.7,
+        }),
+      ],
+    });
+  });
+
+  it("rejects comparison when a requested model is neither benchmarked nor cataloged", async () => {
+    const { POST } = await import("@/app/api/compare/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/compare", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Pick a reasoning model.",
+          modelNames: ["Model A", "Missing Model XYZ"],
         }),
       }),
     );

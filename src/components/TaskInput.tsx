@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
-import type { ApiError, RecommendResponse } from "@/types/api";
+import type { ApiError, ModelsResponse, RecommendResponse } from "@/types/api";
 
 const MAX_TASK_LENGTH = 500;
 const RECOMMENDATION_STORAGE_KEY = "which-model:last-recommendation";
@@ -39,6 +39,21 @@ function readStoredModelNames() {
   }
 }
 
+function uniqueModelNames(names: string[]) {
+  return Array.from(new Set(names.filter(Boolean)));
+}
+
+async function fetchCatalogModelNames() {
+  const response = await fetch("/api/models");
+
+  if (!response.ok) {
+    throw new Error("Could not load model catalog.");
+  }
+
+  const payload = (await response.json()) as ModelsResponse;
+  return payload.models.map((model) => model.name);
+}
+
 function getErrorMessage(payload: unknown, fallback: string) {
   if (
     payload &&
@@ -61,6 +76,19 @@ export function TaskInput() {
   const [compareSpecific, setCompareSpecific] = useState(false);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
+
+  async function loadModelOptions() {
+    const storedModelNames = readStoredModelNames();
+
+    setModelOptions(storedModelNames);
+
+    try {
+      const catalogModelNames = await fetchCatalogModelNames();
+      setModelOptions(uniqueModelNames([...storedModelNames, ...catalogModelNames]));
+    } catch {
+      setModelOptions(storedModelNames);
+    }
+  }
 
   async function handleSubmit() {
     const trimmedTask = task.trim();
@@ -171,7 +199,7 @@ export function TaskInput() {
 
               setCompareSpecific(checked);
               if (checked && modelOptions.length === 0) {
-                setModelOptions(readStoredModelNames());
+                void loadModelOptions();
               }
             }}
             type="checkbox"

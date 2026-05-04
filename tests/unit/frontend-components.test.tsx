@@ -2,12 +2,19 @@
  * @jest-environment jsdom
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { BenchmarkBadge } from "@/components/BenchmarkBadge";
 import { ModelCard } from "@/components/ModelCard";
 import { RankingList } from "@/components/RankingList";
+import { TaskInput } from "@/components/TaskInput";
 import type { RankedModel } from "@/types/model";
+
+const push = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+}));
 
 const recommendation: RankedModel = {
   rank: 1,
@@ -108,5 +115,43 @@ describe("RankingList", () => {
 
     expect(screen.getByText("Model 10")).toBeInTheDocument();
     expect(screen.queryByText("Model 11")).not.toBeInTheDocument();
+  });
+});
+
+describe("TaskInput", () => {
+  beforeEach(() => {
+    push.mockReset();
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        models: [
+          {
+            name: "Claude Sonnet 4.6",
+            provider: "Anthropic",
+            contextWindow: 1_000_000,
+            costInputPer1M: 3,
+            costOutputPer1M: 15,
+            hasBenchmarks: false,
+            status: "active",
+          },
+        ],
+      }),
+    }) as jest.Mock;
+  });
+
+  it("loads catalog models when opening the specific-model selector", async () => {
+    render(<TaskInput />);
+
+    fireEvent.click(screen.getByLabelText("Compare specific models"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Claude Sonnet 4.6")).toBeInTheDocument();
+    });
+    expect(global.fetch).toHaveBeenCalledWith("/api/models");
+    expect(
+      screen.queryByText(/Run a recommendation once to populate model choices/),
+    ).not.toBeInTheDocument();
   });
 });

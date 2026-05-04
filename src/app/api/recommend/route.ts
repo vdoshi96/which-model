@@ -1,5 +1,6 @@
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
+import { findCatalogModel } from "@/lib/modelCatalog";
 import { assertRateLimit, getClientIp, RateLimitError } from "@/lib/rateLimit";
 import { BENCHMARK_DIMENSIONS, rankModels } from "@/lib/scoring";
 import { recommendRequestSchema } from "@/lib/validators/recommend";
@@ -99,14 +100,23 @@ export async function POST(request: Request) {
     include: { scores: true },
   })) as RecommendedModelRecord[];
   const recommendations = rankModels(
-    models.map((model) => ({
-      name: model.name,
-      provider: model.provider,
-      contextWindow: model.contextWindow,
-      costInputPer1M: model.costInputPer1M,
-      costOutputPer1M: model.costOutputPer1M,
-      benchmarks: toBenchmarkScores(model.scores),
-    })),
+    models
+      .map((model) => {
+        const catalogModel = findCatalogModel(model.name);
+        const benchmarks = toBenchmarkScores(model.scores);
+
+        return {
+          name: catalogModel?.name ?? model.name,
+          provider: model.provider || catalogModel?.provider || "Unknown",
+          contextWindow: model.contextWindow ?? catalogModel?.contextWindow ?? null,
+          costInputPer1M:
+            model.costInputPer1M ?? catalogModel?.costInputPer1M ?? null,
+          costOutputPer1M:
+            model.costOutputPer1M ?? catalogModel?.costOutputPer1M ?? null,
+          benchmarks,
+        };
+      })
+      .filter((model) => model.benchmarks.length > 0),
     interpretation.dimensions,
     10,
   );
