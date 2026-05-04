@@ -9,6 +9,7 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: shouldUseSecureCookies(request),
   });
 
   if (isProtectedRoute && !token) {
@@ -23,3 +24,17 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/results/:path*", "/compare/:path*"],
 };
+
+function shouldUseSecureCookies(request: NextRequest) {
+  const configuredUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL;
+
+  if (configuredUrl) {
+    try {
+      return new URL(configuredUrl).protocol === "https:";
+    } catch {
+      return request.nextUrl.protocol === "https:";
+    }
+  }
+
+  return request.nextUrl.protocol === "https:";
+}
