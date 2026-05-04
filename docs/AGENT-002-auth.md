@@ -1,13 +1,13 @@
 # AGENT-002: Auth System
 
 ## Status
-[x] In Progress | [ ] Complete | [ ] Blocked
+[ ] In Progress | [x] Complete | [ ] Blocked
 
 ## Branch
 `agent/002-auth`
 
 ## PR Link
-Pending until PR is opened.
+https://github.com/vdoshi96/which-model/pull/2
 
 ## Responsibilities
 - Implement NextAuth v5 Credentials provider for username/password auth.
