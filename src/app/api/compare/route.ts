@@ -22,6 +22,19 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
+type ScoreRecord = {
+  source: string;
+  dimension: string;
+  score: number;
+  rawLabel?: string | null;
+};
+type ComparedModelRecord = {
+  name: string;
+  provider: string;
+  contextWindow: number | null;
+  costInputPer1M: number | null;
+  scores: ScoreRecord[];
+};
 
 function logRouteError(message: string, ipAddress: string, error: unknown) {
   console.error(message, {
@@ -85,10 +98,10 @@ export async function POST(request: Request) {
   }
 
   const prisma = getPrisma();
-  const models = await prisma.model.findMany({
+  const models = (await prisma.model.findMany({
     where: { name: { in: parsed.data.modelNames } },
     include: { scores: true },
-  });
+  })) as ComparedModelRecord[];
 
   if (models.length !== parsed.data.modelNames.length) {
     return Response.json(
