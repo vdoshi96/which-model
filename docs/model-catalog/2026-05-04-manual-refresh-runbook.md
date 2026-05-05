@@ -8,6 +8,7 @@ Use this runbook when refreshing recommendation data. Recommendations now come f
 
 - Update `src/data/curated/models.json` for model metadata, pricing, context windows, status, aliases, and source notes.
 - Update `src/data/curated/benchmark-definitions.json` when adding or revising benchmark definitions.
+- Update `src/data/curated/sources.json` when adding a new benchmark/provider source or when an existing source adds leaderboard pages, tabs, filters, category options, rank views, score ranges, pricing ranges, or context ranges.
 - Update `src/data/curated/scores.json` when adding or revising source-backed benchmark or prior scores.
 - Keep changes small enough that reviewers can trace each data edit back to a source.
 
@@ -33,7 +34,9 @@ Use this runbook when refreshing recommendation data. Recommendations now come f
 ## Benchmark Pages Checklist
 
 - Open the benchmark's official leaderboard or release page.
+- For Arena.ai, start at `https://arena.ai/leaderboard`, then inspect each dedicated leaderboard page under the overview: Text, Code, Vision, Document, Search, Text to Image, Image Edit, Text to Video, Image to Video, and Video Edit.
 - Confirm the benchmark name, category, score scale, date, and whether higher scores are better.
+- Capture page-level options in `sources.json` before extracting scores: ranking/pareto views when present, model/lab rank-by tabs, source category labels, downstream benchmark applicability, hidden category counts, license filters, score ranges, price ranges, and context ranges when exposed.
 - Check whether the row is exact, estimated, or a catalog prior.
 - Capture the model display name exactly as the benchmark presents it, then map it to the catalog model ID.
 - Record benchmark limitations when they affect interpretation.
@@ -63,6 +66,7 @@ Use this template in refresh notes or PR descriptions for each material data cha
 - Keep model IDs stable unless the provider changed the canonical API ID.
 - Add aliases for common provider names, API IDs, and benchmark display names.
 - Keep `status`, `provider`, `contextWindow`, pricing fields, and `lastVerified` consistent with the source notes.
+- Use `sources.json` to store page structure and extraction options. Source pages should keep stable page IDs, URLs, page stats, filters, option counts, and notes about hidden or grouped options.
 - Use `benchmark-definitions.json` for benchmark meaning and limitations.
 - Use `scores.json` only for scores that can be traced to a benchmark, source-backed derived value, or clearly labeled catalog prior.
 - Avoid silent deletes. If removing a model or score, explain why in the refresh notes and PR checklist.

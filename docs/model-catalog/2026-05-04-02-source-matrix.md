@@ -1,6 +1,6 @@
 # Model Catalog Source Matrix
 
-Date accessed: 2026-05-04
+Date accessed: 2026-05-05
 
 This file records the source policy for the curated catalog. The TypeScript catalog stores the normalized values used by the app; this document keeps the research trail readable.
 
@@ -14,6 +14,13 @@ This file records the source policy for the curated catalog. The TypeScript cata
 - Thinking/reasoning variants are separate catalog rows when providers expose them as separate API ids, modes, or pricing surfaces.
 - During benchmark refresh, live source metadata wins for non-null context and pricing fields; catalog values fill missing fields and canonicalize names/providers.
 - Catalog rows should be updated when provider docs change.
+- Source structure belongs in `src/data/curated/sources.json`: page URLs, leaderboard tabs, source category labels, downstream benchmark applicability, view modes, filters, score ranges, price ranges, context ranges, page stats, and extraction caveats. Benchmark definitions should reference what a score means; the source registry should preserve how the source exposes that information.
+
+## Benchmark Source Registries
+
+| Source | Registered URLs | Notes |
+|---|---|---|
+| Arena.ai | https://arena.ai/leaderboard, https://arena.ai/leaderboard/text, https://arena.ai/leaderboard/code, https://arena.ai/leaderboard/vision, https://arena.ai/leaderboard/document, https://arena.ai/leaderboard/search, https://arena.ai/leaderboard/text-to-image, https://arena.ai/leaderboard/image-edit, https://arena.ai/leaderboard/text-to-video, https://arena.ai/leaderboard/image-to-video, https://arena.ai/leaderboard/video-edit | Arena is stored as a page-and-options source registry. The overview page exposes all leaderboard pages; dedicated pages retain source category labels, rank-by options, license filters, score ranges, vote counts, model counts, and page-specific caveats. Ranking/pareto views, price ranges, and context ranges are recorded only on pages that expose them. |
 
 ## Provider Sources
 

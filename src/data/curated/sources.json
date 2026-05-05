@@ -1,0 +1,1425 @@
+[
+  {
+    "id": "arena-ai",
+    "label": "Arena.ai Leaderboards",
+    "provider": "Arena Intelligence",
+    "homepage": "https://arena.ai/leaderboard",
+    "description": "Arena-hosted public leaderboards for text, code, vision, document, search, image, and video model comparisons. Stored as a page-and-options source registry so refreshes can capture categories, filters, views, ranges, and leaderboard-specific stats before mapping scores into benchmark definitions.",
+    "lastVerified": "2026-05-05",
+    "pages": [
+      {
+        "id": "arena-ai-overview",
+        "label": "Leaderboard Overview",
+        "url": "https://arena.ai/leaderboard",
+        "kind": "overview",
+        "sourceCategoryLabels": [
+          "Text",
+          "Code",
+          "Vision",
+          "Document",
+          "Search",
+          "Text to Image",
+          "Image Edit",
+          "Text to Video",
+          "Image to Video",
+          "Video Edit",
+          "Overall",
+          "Expert",
+          "Hard Prompts",
+          "Coding",
+          "Math",
+          "Creative Writing",
+          "Instruction Following",
+          "Longer Query"
+        ],
+        "benchmarkCategories": [],
+        "stats": {
+          "asOf": "2026-05-05"
+        },
+        "filters": [
+          {
+            "id": "arena-ai-top-nav",
+            "label": "Arena navigation",
+            "kind": "arena_nav",
+            "options": [
+              {
+                "id": "arena-ai-nav-chat",
+                "label": "Chat",
+                "value": "chat"
+              },
+              {
+                "id": "arena-ai-nav-code",
+                "label": "Code",
+                "value": "code",
+                "url": "https://arena.ai/leaderboard/code"
+              },
+              {
+                "id": "arena-ai-nav-image",
+                "label": "Image",
+                "value": "image"
+              },
+              {
+                "id": "arena-ai-nav-video",
+                "label": "Video",
+                "value": "video"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-leaderboard-pages",
+            "label": "Leaderboard pages",
+            "kind": "leaderboard_page",
+            "optionCount": 10,
+            "options": [
+              {
+                "id": "arena-ai-page-text",
+                "label": "Text",
+                "value": "text",
+                "url": "https://arena.ai/leaderboard/text"
+              },
+              {
+                "id": "arena-ai-page-code",
+                "label": "Code",
+                "value": "code",
+                "url": "https://arena.ai/leaderboard/code"
+              },
+              {
+                "id": "arena-ai-page-vision",
+                "label": "Vision",
+                "value": "vision",
+                "url": "https://arena.ai/leaderboard/vision"
+              },
+              {
+                "id": "arena-ai-page-document",
+                "label": "Document",
+                "value": "document",
+                "url": "https://arena.ai/leaderboard/document"
+              },
+              {
+                "id": "arena-ai-page-search",
+                "label": "Search",
+                "value": "search",
+                "url": "https://arena.ai/leaderboard/search"
+              },
+              {
+                "id": "arena-ai-page-text-to-image",
+                "label": "Text to Image",
+                "value": "text-to-image",
+                "url": "https://arena.ai/leaderboard/text-to-image"
+              },
+              {
+                "id": "arena-ai-page-image-edit",
+                "label": "Image Edit",
+                "value": "image-edit",
+                "url": "https://arena.ai/leaderboard/image-edit"
+              },
+              {
+                "id": "arena-ai-page-text-to-video",
+                "label": "Text to Video",
+                "value": "text-to-video",
+                "url": "https://arena.ai/leaderboard/text-to-video"
+              },
+              {
+                "id": "arena-ai-page-image-to-video",
+                "label": "Image to Video",
+                "value": "image-to-video",
+                "url": "https://arena.ai/leaderboard/image-to-video"
+              },
+              {
+                "id": "arena-ai-page-video-edit",
+                "label": "Video Edit",
+                "value": "video-edit",
+                "url": "https://arena.ai/leaderboard/video-edit"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-overview-text-columns",
+            "label": "Text overview columns",
+            "kind": "category",
+            "options": [
+              {
+                "id": "arena-ai-overview-text-overall",
+                "label": "Overall",
+                "value": "overall"
+              },
+              {
+                "id": "arena-ai-overview-text-expert",
+                "label": "Expert",
+                "value": "expert"
+              },
+              {
+                "id": "arena-ai-overview-text-hard-prompts",
+                "label": "Hard Prompts",
+                "value": "hard-prompts"
+              },
+              {
+                "id": "arena-ai-overview-text-coding",
+                "label": "Coding",
+                "value": "coding"
+              },
+              {
+                "id": "arena-ai-overview-text-math",
+                "label": "Math",
+                "value": "math"
+              },
+              {
+                "id": "arena-ai-overview-text-creative-writing",
+                "label": "Creative Writing",
+                "value": "creative-writing"
+              },
+              {
+                "id": "arena-ai-overview-text-instruction-following",
+                "label": "Instruction Following",
+                "value": "instruction-following"
+              },
+              {
+                "id": "arena-ai-overview-text-longer-query",
+                "label": "Longer Query",
+                "value": "longer-query"
+              }
+            ]
+          }
+        ],
+        "notes": "Overview cards expose the leaderboards as nested links and show top ranked models per arena. Dedicated pages should be used for extraction because they include filters, ranges, model counts, vote counts, and table columns."
+      },
+      {
+        "id": "arena-ai-text",
+        "label": "Text Arena Overall",
+        "url": "https://arena.ai/leaderboard/text",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Overall",
+          "Expert",
+          "Occupational",
+          "Math",
+          "Instruction Following",
+          "Multi-Turn",
+          "Creative Writing",
+          "Coding",
+          "Hard Prompts",
+          "Hard Prompts (English)"
+        ],
+        "benchmarkCategories": [
+          "overall",
+          "math",
+          "instruction_following",
+          "creative_writing",
+          "coding"
+        ],
+        "stats": {
+          "asOf": "2026-05-01",
+          "votes": 6035972,
+          "models": 356
+        },
+        "filters": [
+          {
+            "id": "arena-ai-text-view",
+            "label": "View as",
+            "kind": "table_view",
+            "options": [
+              {
+                "id": "arena-ai-text-ranking",
+                "label": "Ranking",
+                "value": "ranking"
+              },
+              {
+                "id": "arena-ai-text-pareto",
+                "label": "Pareto",
+                "value": "pareto"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-text-categories",
+            "label": "Categories",
+            "kind": "category",
+            "optionCount": 29,
+            "options": [
+              {
+                "id": "arena-ai-text-overall",
+                "label": "Overall",
+                "value": "overall"
+              },
+              {
+                "id": "arena-ai-text-expert",
+                "label": "Expert",
+                "value": "expert"
+              },
+              {
+                "id": "arena-ai-text-occupational",
+                "label": "Occupational",
+                "value": "occupational"
+              },
+              {
+                "id": "arena-ai-text-math",
+                "label": "Math",
+                "value": "math"
+              },
+              {
+                "id": "arena-ai-text-instruction-following",
+                "label": "Instruction Following",
+                "value": "instruction-following"
+              },
+              {
+                "id": "arena-ai-text-multi-turn",
+                "label": "Multi-Turn",
+                "value": "multi-turn"
+              },
+              {
+                "id": "arena-ai-text-creative-writing",
+                "label": "Creative Writing",
+                "value": "creative-writing"
+              },
+              {
+                "id": "arena-ai-text-coding",
+                "label": "Coding",
+                "value": "coding"
+              },
+              {
+                "id": "arena-ai-text-hard-prompts",
+                "label": "Hard Prompts",
+                "value": "hard-prompts"
+              },
+              {
+                "id": "arena-ai-text-hard-prompts-english",
+                "label": "Hard Prompts (English)",
+                "value": "hard-prompts-english"
+              }
+            ],
+            "notes": "The page advertises 29 categories. The visible snapshot includes the first 10; refresh tooling should expand '+ View more' and preserve the remaining labels."
+          },
+          {
+            "id": "arena-ai-text-style-control",
+            "label": "Style Control",
+            "kind": "style_control",
+            "options": [
+              {
+                "id": "arena-ai-text-style-on",
+                "label": "On",
+                "value": "on"
+              },
+              {
+                "id": "arena-ai-text-style-off",
+                "label": "Off",
+                "value": "off"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-text-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-text-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-text-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-text-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-text-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 951,
+              "max": 1503,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-text-input-price",
+            "label": "Input Price",
+            "kind": "range",
+            "range": {
+              "min": 0,
+              "max": 75,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-text-output-price",
+            "label": "Output Price",
+            "kind": "range",
+            "range": {
+              "min": 0,
+              "max": 150,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-text-context-length",
+            "label": "Context Length",
+            "kind": "range",
+            "range": {
+              "min": 2000,
+              "max": 2100000,
+              "unit": "tokens"
+            }
+          },
+          {
+            "id": "arena-ai-text-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-text-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-text-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Text leaderboard score rows expose rank, rank spread, model, score, votes, price per million tokens, and context window. The source is appropriate for overall, math, instruction-following, creative-writing, coding, multi-turn, and hard-prompt task signals."
+      },
+      {
+        "id": "arena-ai-code",
+        "label": "Code Arena WebDev",
+        "url": "https://arena.ai/leaderboard/code",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "WebDev",
+          "Overall",
+          "HTML",
+          "React",
+          "Image to WebDev"
+        ],
+        "benchmarkCategories": [
+          "coding",
+          "tool_use"
+        ],
+        "stats": {
+          "asOf": "2026-05-04",
+          "votes": 279794,
+          "models": 71
+        },
+        "filters": [
+          {
+            "id": "arena-ai-code-view",
+            "label": "View as",
+            "kind": "table_view",
+            "options": [
+              {
+                "id": "arena-ai-code-ranking",
+                "label": "Ranking",
+                "value": "ranking"
+              },
+              {
+                "id": "arena-ai-code-pareto",
+                "label": "Pareto",
+                "value": "pareto"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-code-categories",
+            "label": "Categories",
+            "kind": "category",
+            "optionCount": 5,
+            "options": [
+              {
+                "id": "arena-ai-code-webdev",
+                "label": "WebDev",
+                "value": "webdev"
+              },
+              {
+                "id": "arena-ai-code-overall",
+                "label": "Overall",
+                "value": "overall"
+              },
+              {
+                "id": "arena-ai-code-html",
+                "label": "HTML",
+                "value": "html"
+              },
+              {
+                "id": "arena-ai-code-react",
+                "label": "React",
+                "value": "react"
+              },
+              {
+                "id": "arena-ai-code-image-to-webdev",
+                "label": "Image to WebDev",
+                "value": "image-to-webdev"
+              }
+            ],
+            "notes": "The visible page labels Categories(4) while also exposing an Image to WebDev option under the WebDev grouping; the flat registry keeps every visible option and refresh code should preserve the source grouping separately."
+          },
+          {
+            "id": "arena-ai-code-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-code-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-code-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-code-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-code-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 1091,
+              "max": 1568,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-code-input-price",
+            "label": "Input Price",
+            "kind": "range",
+            "range": {
+              "min": 0.09,
+              "max": 15,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-code-output-price",
+            "label": "Output Price",
+            "kind": "range",
+            "range": {
+              "min": 0.28,
+              "max": 75,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-code-context-length",
+            "label": "Context Length",
+            "kind": "range",
+            "range": {
+              "min": 128000,
+              "max": 2000000,
+              "unit": "tokens"
+            }
+          },
+          {
+            "id": "arena-ai-code-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-code-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-code-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "The Code page is now the primary Arena source for front-end web development and agentic coding workflows. It stores price and context columns directly alongside leaderboard scores."
+      },
+      {
+        "id": "arena-ai-vision",
+        "label": "Vision Arena Overall",
+        "url": "https://arena.ai/leaderboard/vision",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Overall",
+          "English",
+          "Chinese",
+          "Captioning",
+          "Creative Writing",
+          "Diagram",
+          "Entity Recognition",
+          "Homework",
+          "Humor",
+          "OCR"
+        ],
+        "benchmarkCategories": [],
+        "stats": {
+          "asOf": "2026-05-01",
+          "votes": 811827,
+          "models": 120
+        },
+        "filters": [
+          {
+            "id": "arena-ai-vision-view",
+            "label": "View as",
+            "kind": "table_view",
+            "options": [
+              {
+                "id": "arena-ai-vision-ranking",
+                "label": "Ranking",
+                "value": "ranking"
+              },
+              {
+                "id": "arena-ai-vision-pareto",
+                "label": "Pareto",
+                "value": "pareto"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-vision-categories",
+            "label": "Categories",
+            "kind": "category",
+            "optionCount": 10,
+            "options": [
+              {
+                "id": "arena-ai-vision-overall",
+                "label": "Overall",
+                "value": "overall"
+              },
+              {
+                "id": "arena-ai-vision-english",
+                "label": "English",
+                "value": "english"
+              },
+              {
+                "id": "arena-ai-vision-chinese",
+                "label": "Chinese",
+                "value": "chinese"
+              },
+              {
+                "id": "arena-ai-vision-captioning",
+                "label": "Captioning",
+                "value": "captioning"
+              },
+              {
+                "id": "arena-ai-vision-creative-writing",
+                "label": "Creative Writing",
+                "value": "creative-writing"
+              },
+              {
+                "id": "arena-ai-vision-diagram",
+                "label": "Diagram",
+                "value": "diagram"
+              },
+              {
+                "id": "arena-ai-vision-entity-recognition",
+                "label": "Entity Recognition",
+                "value": "entity-recognition"
+              },
+              {
+                "id": "arena-ai-vision-homework",
+                "label": "Homework",
+                "value": "homework"
+              },
+              {
+                "id": "arena-ai-vision-humor",
+                "label": "Humor",
+                "value": "humor"
+              },
+              {
+                "id": "arena-ai-vision-ocr",
+                "label": "OCR",
+                "value": "ocr"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-vision-style-control",
+            "label": "Style Control",
+            "kind": "style_control",
+            "options": [
+              {
+                "id": "arena-ai-vision-style-on",
+                "label": "On",
+                "value": "on"
+              },
+              {
+                "id": "arena-ai-vision-style-off",
+                "label": "Off",
+                "value": "off"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-vision-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-vision-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-vision-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-vision-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-vision-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 882,
+              "max": 1303,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-vision-input-price",
+            "label": "Input Price",
+            "kind": "range",
+            "range": {
+              "min": 0.05,
+              "max": 75,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-vision-output-price",
+            "label": "Output Price",
+            "kind": "range",
+            "range": {
+              "min": 0.15,
+              "max": 150,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-vision-context-length",
+            "label": "Context Length",
+            "kind": "range",
+            "range": {
+              "min": 8200,
+              "max": 2100000,
+              "unit": "tokens"
+            }
+          },
+          {
+            "id": "arena-ai-vision-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-vision-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-vision-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Vision results are stored as source metadata for future multimodal ranking support. Current recommendation categories can use this only after task mapping explicitly accounts for vision inputs."
+      },
+      {
+        "id": "arena-ai-document",
+        "label": "Document Arena",
+        "url": "https://arena.ai/leaderboard/document",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Document"
+        ],
+        "benchmarkCategories": [
+          "long_context",
+          "reasoning",
+          "overall"
+        ],
+        "stats": {
+          "asOf": "2026-04-26",
+          "votes": 118600,
+          "models": 23
+        },
+        "filters": [
+          {
+            "id": "arena-ai-document-view",
+            "label": "View as",
+            "kind": "table_view",
+            "options": [
+              {
+                "id": "arena-ai-document-ranking",
+                "label": "Ranking",
+                "value": "ranking"
+              },
+              {
+                "id": "arena-ai-document-pareto",
+                "label": "Pareto",
+                "value": "pareto"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-document-style-control",
+            "label": "Style Control",
+            "kind": "style_control",
+            "options": [
+              {
+                "id": "arena-ai-document-style-on",
+                "label": "On",
+                "value": "on"
+              },
+              {
+                "id": "arena-ai-document-style-off",
+                "label": "Off",
+                "value": "off"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-document-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-document-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-document-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-document-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-document-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 1406,
+              "max": 1526,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-document-input-price",
+            "label": "Input Price",
+            "kind": "range",
+            "range": {
+              "min": 0.5,
+              "max": 5,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-document-output-price",
+            "label": "Output Price",
+            "kind": "range",
+            "range": {
+              "min": 3,
+              "max": 30,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-document-context-length",
+            "label": "Context Length",
+            "kind": "range",
+            "range": {
+              "min": 200000,
+              "max": 2000000,
+              "unit": "tokens"
+            }
+          },
+          {
+            "id": "arena-ai-document-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-document-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-document-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Document Arena covers document analysis and long-content reasoning. It should feed long-context/document-specific task recommendations only when the task references files, PDFs, or document QA."
+      },
+      {
+        "id": "arena-ai-search",
+        "label": "Search Arena",
+        "url": "https://arena.ai/leaderboard/search",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Search"
+        ],
+        "benchmarkCategories": [
+          "tool_use",
+          "overall",
+          "reasoning"
+        ],
+        "stats": {
+          "asOf": "2026-05-01",
+          "votes": 490941,
+          "models": 28
+        },
+        "filters": [
+          {
+            "id": "arena-ai-search-view",
+            "label": "View as",
+            "kind": "table_view",
+            "options": [
+              {
+                "id": "arena-ai-search-ranking",
+                "label": "Ranking",
+                "value": "ranking"
+              },
+              {
+                "id": "arena-ai-search-pareto",
+                "label": "Pareto",
+                "value": "pareto"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-search-style-control",
+            "label": "Style Control",
+            "kind": "style_control",
+            "options": [
+              {
+                "id": "arena-ai-search-style-on",
+                "label": "On",
+                "value": "on"
+              },
+              {
+                "id": "arena-ai-search-style-off",
+                "label": "Off",
+                "value": "off"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-search-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-search-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-search-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-search-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-search-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 1006,
+              "max": 1255,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-search-input-price",
+            "label": "Input Price",
+            "kind": "range",
+            "range": {
+              "min": 0.2,
+              "max": 30,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-search-output-price",
+            "label": "Output Price",
+            "kind": "range",
+            "range": {
+              "min": 0.5,
+              "max": 75,
+              "unit": "usd_per_million_tokens"
+            }
+          },
+          {
+            "id": "arena-ai-search-context-length",
+            "label": "Context Length",
+            "kind": "range",
+            "range": {
+              "min": 8200,
+              "max": 2000000,
+              "unit": "tokens"
+            }
+          },
+          {
+            "id": "arena-ai-search-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-search-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-search-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Search Arena is the source to use when users request web-grounded research, live search, or models with integrated web search."
+      },
+      {
+        "id": "arena-ai-text-to-image",
+        "label": "Text-to-Image Arena Overall",
+        "url": "https://arena.ai/leaderboard/text-to-image",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Overall",
+          "Product, Branding and Commercial Design",
+          "3D Imaging and Modeling",
+          "Cartoon, Anime and Fantasy",
+          "Photorealistic and Cinematic Imagery",
+          "Art",
+          "Portraits",
+          "Text Rendering"
+        ],
+        "benchmarkCategories": [],
+        "stats": {
+          "asOf": "2026-04-22",
+          "votes": 4965676,
+          "models": 57
+        },
+        "filters": [
+          {
+            "id": "arena-ai-text-to-image-categories",
+            "label": "Categories",
+            "kind": "category",
+            "optionCount": 8,
+            "options": [
+              {
+                "id": "arena-ai-text-to-image-overall",
+                "label": "Overall",
+                "value": "overall"
+              },
+              {
+                "id": "arena-ai-text-to-image-commercial-design",
+                "label": "Product, Branding and Commercial Design",
+                "value": "product-branding-commercial-design"
+              },
+              {
+                "id": "arena-ai-text-to-image-3d-imaging",
+                "label": "3D Imaging and Modeling",
+                "value": "3d-imaging-modeling"
+              },
+              {
+                "id": "arena-ai-text-to-image-cartoon-anime-fantasy",
+                "label": "Cartoon, Anime and Fantasy",
+                "value": "cartoon-anime-fantasy"
+              },
+              {
+                "id": "arena-ai-text-to-image-photorealistic",
+                "label": "Photorealistic and Cinematic Imagery",
+                "value": "photorealistic-cinematic-imagery"
+              },
+              {
+                "id": "arena-ai-text-to-image-art",
+                "label": "Art",
+                "value": "art"
+              },
+              {
+                "id": "arena-ai-text-to-image-portraits",
+                "label": "Portraits",
+                "value": "portraits"
+              },
+              {
+                "id": "arena-ai-text-to-image-text-rendering",
+                "label": "Text Rendering",
+                "value": "text-rendering"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-text-to-image-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-text-to-image-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-text-to-image-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-text-to-image-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-text-to-image-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 897,
+              "max": 1508,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-text-to-image-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-text-to-image-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-text-to-image-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Stored for future multimodal/image recommendation support. Do not collapse image-generation leaderboards into text creative-writing recommendations without an explicit image-generation task."
+      },
+      {
+        "id": "arena-ai-image-edit",
+        "label": "Image Edit Arena Single-Image Edit",
+        "url": "https://arena.ai/leaderboard/image-edit",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Single-Image Edit",
+          "Multi-Image Edit"
+        ],
+        "benchmarkCategories": [],
+        "stats": {
+          "asOf": "2026-04-22",
+          "votes": 25903041,
+          "models": 45
+        },
+        "filters": [
+          {
+            "id": "arena-ai-image-edit-categories",
+            "label": "Categories",
+            "kind": "category",
+            "optionCount": 2,
+            "options": [
+              {
+                "id": "arena-ai-image-edit-single",
+                "label": "Single-Image Edit",
+                "value": "single-image-edit"
+              },
+              {
+                "id": "arena-ai-image-edit-multi",
+                "label": "Multi-Image Edit",
+                "value": "multi-image-edit"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-image-edit-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-image-edit-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-image-edit-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-image-edit-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-image-edit-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 1000,
+              "max": 1510,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-image-edit-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-image-edit-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-image-edit-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Image editing is intentionally source-registered but not mapped into text model ranking categories yet."
+      },
+      {
+        "id": "arena-ai-text-to-video",
+        "label": "Text-to-Video Arena",
+        "url": "https://arena.ai/leaderboard/text-to-video",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Text-to-Video"
+        ],
+        "benchmarkCategories": [],
+        "stats": {
+          "asOf": "2026-04-16",
+          "votes": 356287,
+          "models": 39
+        },
+        "filters": [
+          {
+            "id": "arena-ai-text-to-video-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-text-to-video-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-text-to-video-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-text-to-video-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-text-to-video-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 1006,
+              "max": 1461,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-text-to-video-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-text-to-video-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-text-to-video-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Video-generation pages are retained as source metadata for future non-text recommendation work."
+      },
+      {
+        "id": "arena-ai-image-to-video",
+        "label": "Image-to-Video Arena",
+        "url": "https://arena.ai/leaderboard/image-to-video",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Image-to-Video"
+        ],
+        "benchmarkCategories": [],
+        "stats": {
+          "asOf": "2026-04-16",
+          "votes": 907386,
+          "models": 39
+        },
+        "filters": [
+          {
+            "id": "arena-ai-image-to-video-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-image-to-video-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-image-to-video-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-image-to-video-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-image-to-video-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 995,
+              "max": 1454,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-image-to-video-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-image-to-video-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-image-to-video-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Image-to-video is source-registered so refreshes do not lose modality-specific leaderboard metadata."
+      },
+      {
+        "id": "arena-ai-video-edit",
+        "label": "Video Edit Arena",
+        "url": "https://arena.ai/leaderboard/video-edit",
+        "kind": "leaderboard",
+        "sourceCategoryLabels": [
+          "Video Edit"
+        ],
+        "benchmarkCategories": [],
+        "stats": {
+          "asOf": "2026-04-21",
+          "votes": 13325,
+          "models": 6
+        },
+        "filters": [
+          {
+            "id": "arena-ai-video-edit-license",
+            "label": "License Type",
+            "kind": "license",
+            "options": [
+              {
+                "id": "arena-ai-video-edit-license-all",
+                "label": "All",
+                "value": "all"
+              },
+              {
+                "id": "arena-ai-video-edit-license-proprietary",
+                "label": "Proprietary",
+                "value": "proprietary"
+              },
+              {
+                "id": "arena-ai-video-edit-license-open-source",
+                "label": "Open Source",
+                "value": "open-source"
+              }
+            ]
+          },
+          {
+            "id": "arena-ai-video-edit-score-range",
+            "label": "Score Range",
+            "kind": "range",
+            "range": {
+              "min": 1208,
+              "max": 1362,
+              "unit": "elo"
+            }
+          },
+          {
+            "id": "arena-ai-video-edit-rank-by",
+            "label": "Rank by",
+            "kind": "rank_by",
+            "options": [
+              {
+                "id": "arena-ai-video-edit-rank-models",
+                "label": "Models",
+                "value": "models"
+              },
+              {
+                "id": "arena-ai-video-edit-rank-labs",
+                "label": "Labs",
+                "value": "labs"
+              }
+            ]
+          }
+        ],
+        "notes": "Video Edit has a small model count in the verified snapshot, so downstream weighting should treat it as narrow modality coverage."
+      }
+    ]
+  }
+]

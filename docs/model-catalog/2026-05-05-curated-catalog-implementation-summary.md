@@ -13,6 +13,7 @@ Date: 2026-05-05
 - Added a curated data foundation under `src/data/curated/`:
   - `models.json`
   - `benchmark-definitions.json`
+  - `sources.json`
   - `scores.json`
 - Added Zod schema validation and catalog loading utilities under `src/lib/curatedCatalog/`.
 - Added recommendation preferences for cost sensitivity, frontier preference, long context, low latency, local-only, preferred providers, preferred models, and infrastructure filters.
@@ -47,6 +48,7 @@ Date: 2026-05-05
 Refreshes are manual editorial events. A refresh PR must document:
 
 - source URLs
+- source page structure, including leaderboard tabs, source category labels, downstream benchmark applicability, filters, views, and score/price/context ranges when the source exposes them
 - visible source facts
 - accessed dates
 - benchmark meanings and limitations

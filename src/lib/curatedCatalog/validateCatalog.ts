@@ -32,8 +32,14 @@ export function validateCuratedCatalog(
     parsedCatalog.models.map((model) => model.id),
     "model id",
   );
+  addDuplicateErrors(
+    errors,
+    parsedCatalog.sources.map((source) => source.id),
+    "source id",
+  );
 
   addDuplicateScoreErrors(errors, parsedCatalog);
+  addSourceRegistryErrors(errors, parsedCatalog);
 
   for (const score of parsedCatalog.scores) {
     if (!modelIds.has(score.modelId)) {
@@ -109,6 +115,113 @@ function addDuplicateScoreErrors(
 
     seen.add(key);
   }
+}
+
+function addSourceRegistryErrors(
+  errors: string[],
+  catalog: CuratedCatalog,
+) {
+  const sourcePageIds: string[] = [];
+  const sourcePageUrls: string[] = [];
+  const sourceOptionIds: string[] = [];
+  const registeredPageUrls = new Set(
+    catalog.sources.flatMap((source) => source.pages.map((page) => page.url)),
+  );
+
+  for (const source of catalog.sources) {
+    if (!isDateOnly(source.lastVerified)) {
+      errors.push(
+        `Source "${source.id}" has invalid lastVerified date "${source.lastVerified}"`,
+      );
+    }
+
+    if (source.pages.length === 0) {
+      errors.push(`Source "${source.id}" has no registered pages`);
+    }
+
+    for (const page of source.pages) {
+      sourcePageIds.push(page.id);
+      sourcePageUrls.push(page.url);
+
+      if (page.sourceCategoryLabels.length === 0) {
+        errors.push(`Source page "${page.id}" has no source category labels`);
+      }
+
+      if (page.stats && !isDateOnly(page.stats.asOf)) {
+        errors.push(
+          `Source page "${page.id}" has invalid stats.asOf date "${page.stats.asOf}"`,
+        );
+      }
+
+      if (page.filters.length === 0) {
+        errors.push(`Source page "${page.id}" has no registered filters`);
+      }
+
+      for (const filter of page.filters) {
+        const optionCount = filter.options?.length ?? 0;
+
+        for (const option of filter.options ?? []) {
+          sourceOptionIds.push(`${page.id}:${option.id}`);
+        }
+
+        if (filter.kind === "range" && !filter.range) {
+          errors.push(
+            `Source page "${page.id}" filter "${filter.id}" is missing a range`,
+          );
+        }
+
+        if (filter.kind === "range" && optionCount > 0) {
+          errors.push(
+            `Source page "${page.id}" filter "${filter.id}" is a range filter but also has options`,
+          );
+        }
+
+        if (filter.kind === "range" && filter.range) {
+          if (filter.range.min > filter.range.max) {
+            errors.push(
+              `Source page "${page.id}" filter "${filter.id}" has min greater than max`,
+            );
+          }
+        }
+
+        if (filter.kind !== "range" && optionCount === 0) {
+          errors.push(
+            `Source page "${page.id}" filter "${filter.id}" is missing options`,
+          );
+        }
+
+        if (filter.kind !== "range" && filter.range) {
+          errors.push(
+            `Source page "${page.id}" filter "${filter.id}" is not a range filter but has a range`,
+          );
+        }
+
+        if (filter.optionCount !== undefined && optionCount > filter.optionCount) {
+          errors.push(
+            `Source page "${page.id}" filter "${filter.id}" has more options than its declared optionCount`,
+          );
+        }
+
+        if (filter.kind === "leaderboard_page") {
+          for (const option of filter.options ?? []) {
+            if (option.url && !registeredPageUrls.has(option.url)) {
+              errors.push(
+                `Source page "${page.id}" leaderboard option "${option.id}" points to unregistered page URL "${option.url}"`,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
+  addDuplicateErrors(errors, sourcePageIds, "source page id");
+  addDuplicateErrors(errors, sourcePageUrls, "source page URL");
+  addDuplicateErrors(errors, sourceOptionIds, "source option id");
+}
+
+function isDateOnly(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function addCoverageWarnings(
