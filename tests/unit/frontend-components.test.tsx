@@ -146,21 +146,42 @@ describe("TaskInput", () => {
     push.mockReset();
     window.localStorage.clear();
     window.sessionStorage.clear();
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        models: [
-          {
-            name: "Claude Sonnet 4.6",
-            provider: "Anthropic",
-            contextWindow: 1_000_000,
-            costInputPer1M: 3,
-            costOutputPer1M: 15,
-            hasBenchmarks: false,
-            status: "active",
-          },
-        ],
-      }),
+    global.fetch = jest.fn((input) => {
+      if (input === "/api/recommend") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            taskSummary: "Creative writing needs broad quality.",
+            dimensions: {
+              reasoning: 0.2,
+              coding: 0,
+              math: 0,
+              instruction_following: 0.8,
+              overall: 0.9,
+              speed: 0,
+              cost_efficiency: 0,
+            },
+            recommendations: [recommendation],
+          }),
+        });
+      }
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          models: [
+            {
+              name: "Claude Sonnet 4.6",
+              provider: "Anthropic",
+              contextWindow: 1_000_000,
+              costInputPer1M: 3,
+              costOutputPer1M: 15,
+              hasBenchmarks: false,
+              status: "active",
+            },
+          ],
+        }),
+      });
     }) as jest.Mock;
   });
 
@@ -218,6 +239,40 @@ describe("TaskInput", () => {
 
     await waitFor(() => {
       expect(screen.getByText("GPT-5.5")).toBeInTheDocument();
+    });
+  });
+
+  it("submits checklist preferences in the recommendation request", async () => {
+    render(<TaskInput />);
+
+    fireEvent.change(
+      screen.getByPlaceholderText("Describe what you need an LLM to do..."),
+      { target: { value: "Write a launch poem for a product." } },
+    );
+    fireEvent.click(screen.getByLabelText("Cost conscious"));
+    fireEvent.click(screen.getByLabelText("Need long context"));
+    fireEvent.click(screen.getByLabelText("Low latency"));
+    fireEvent.click(screen.getByRole("button", { name: "Find Best Models" }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/recommend",
+        expect.objectContaining({
+          body: JSON.stringify({
+            task: "Write a launch poem for a product.",
+            preferences: {
+              costSensitive: true,
+              preferFrontier: true,
+              latencySensitive: true,
+              needsLongContext: true,
+              localOnly: false,
+              preferredProviders: [],
+              preferredModels: [],
+              infrastructure: [],
+            },
+          }),
+        }),
+      );
     });
   });
 });

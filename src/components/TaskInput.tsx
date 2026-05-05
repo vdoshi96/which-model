@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
+import {
+  defaultRecommendationPreferences,
+  type RecommendationPreferences,
+} from "@/lib/recommendation/preferences";
 import { parseRecommendationModelNames } from "@/lib/recommendationCache";
 import type { ApiError, ModelsResponse, RecommendResponse } from "@/types/api";
 
@@ -13,6 +17,24 @@ const MAX_TASK_LENGTH = 500;
 const RECOMMENDATION_STORAGE_KEY = "which-model:last-recommendation";
 const COMPARE_TASK_STORAGE_KEY = "which-model:compare-task";
 const COMPARE_RECOMMENDATIONS_STORAGE_KEY = "which-model:compare-recommendations";
+
+const PREFERENCE_CONTROLS: Array<{
+  key: keyof Pick<
+    RecommendationPreferences,
+    | "costSensitive"
+    | "preferFrontier"
+    | "needsLongContext"
+    | "latencySensitive"
+    | "localOnly"
+  >;
+  label: string;
+}> = [
+  { key: "costSensitive", label: "Cost conscious" },
+  { key: "preferFrontier", label: "Prefer frontier models" },
+  { key: "needsLongContext", label: "Need long context" },
+  { key: "latencySensitive", label: "Low latency" },
+  { key: "localOnly", label: "Local-only" },
+];
 
 function readStoredModelNames() {
   if (typeof window === "undefined") {
@@ -69,6 +91,19 @@ export function TaskInput() {
   const [compareSpecific, setCompareSpecific] = useState(false);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [preferences, setPreferences] = useState<RecommendationPreferences>(
+    defaultRecommendationPreferences,
+  );
+
+  function updatePreference(
+    key: keyof RecommendationPreferences,
+    checked: boolean,
+  ) {
+    setPreferences((currentPreferences) => ({
+      ...currentPreferences,
+      [key]: checked,
+    }));
+  }
 
   async function loadModelOptions() {
     const storedModelNames = readStoredModelNames();
@@ -110,7 +145,7 @@ export function TaskInput() {
 
     try {
       const response = await fetch("/api/recommend", {
-        body: JSON.stringify({ task: trimmedTask }),
+        body: JSON.stringify({ task: trimmedTask, preferences }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
@@ -183,6 +218,25 @@ export function TaskInput() {
         </Button>
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <div className="border-t border-border pt-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {PREFERENCE_CONTROLS.map((control) => (
+            <label
+              className="flex min-h-10 cursor-pointer items-center gap-2 border border-border bg-surface px-3 py-2 text-sm text-secondary"
+              key={control.key}
+            >
+              <input
+                checked={Boolean(preferences[control.key])}
+                onChange={(event) =>
+                  updatePreference(control.key, event.target.checked)
+                }
+                type="checkbox"
+              />
+              <span>{control.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
       <div className="border-t border-border pt-4">
         <label className="flex cursor-pointer items-center gap-3 text-sm text-secondary">
           <input

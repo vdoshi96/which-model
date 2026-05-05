@@ -12,6 +12,7 @@ Output ONLY valid JSON. No preamble, no explanation, no markdown. Example output
     "coding": 0.3,
     "math": 0.1,
     "instruction_following": 0.6,
+    "creative_writing": 0.0,
     "overall": 0.5,
     "speed": 0.2,
     "cost_efficiency": 0.4
@@ -27,6 +28,7 @@ Dimension guide:
 - reasoning: planning, synthesis, debugging, architectural judgment, multi-step analysis
 - coding: writing, refactoring, testing, reviewing, or redesigning software
 - instruction_following: adherence to constraints, format, tool-use details, and user intent
+- creative_writing: songs, poems, fiction, speeches, narrative, marketing, and brand copy
 - overall: broad general model quality when the task is not captured by one narrow benchmark
 - math: quantitative or formal symbolic work
 - speed: latency-sensitive work
@@ -34,7 +36,7 @@ Dimension guide:
 
 For applied software tasks such as UI redesign, app debugging, code review, implementation planning, or product engineering, assign meaningful non-zero weights to coding, instruction_following, reasoning, and usually overall. You should avoid putting all weight on a single dimension unless the task is explicitly and narrowly about one measurable capability.
 
-For creative writing tasks such as songs, poems, stories, speeches, or brand copy, assign high weights to overall and instruction_following, a modest weight to reasoning, and zero weight to coding and math. For all tasks, use cost_efficiency only when the user mentions budget, price, cheapness, throughput, scale, or cost constraints; use speed only when the user mentions latency, real-time use, or turnaround time.
+For creative writing tasks such as songs, poems, stories, speeches, or brand copy, use high weights for overall, creative_writing, and instruction_following. Assign a modest weight to reasoning, and zero weight to coding and math; use cost_efficiency only when the user mentions budget/cost or the costSensitive preference is true; use speed only when the user mentions latency, real-time use, or turnaround time.
 
 All weight values must be between 0.0 and 1.0.`;
 
@@ -43,6 +45,7 @@ const taskDimensionsSchema = z.object({
   coding: z.number().min(0).max(1),
   math: z.number().min(0).max(1),
   instruction_following: z.number().min(0).max(1),
+  creative_writing: z.number().min(0).max(1).optional(),
   overall: z.number().min(0).max(1),
   speed: z.number().min(0).max(1),
   cost_efficiency: z.number().min(0).max(1),

@@ -126,6 +126,276 @@ describe("recommend and compare API routes", () => {
     });
   });
 
+  it("applies recommendation preferences before ranking", async () => {
+    mockInterpretTask.mockResolvedValue({
+      refused: false,
+      dimensions: {
+        reasoning: 0,
+        coding: 1,
+        math: 0,
+        instruction_following: 0,
+        overall: 0,
+        speed: 0,
+        cost_efficiency: 0,
+      },
+      summary: "A coding task where implementation quality matters.",
+    });
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "Premium Quality",
+        provider: "Provider",
+        contextWindow: 128000,
+        costInputPer1M: 10,
+        costOutputPer1M: 30,
+        scores: [
+          {
+            source: "catalog_prior",
+            dimension: "coding",
+            score: 90,
+            rawLabel: "Coding prior",
+          },
+          {
+            source: "catalog_prior",
+            dimension: "cost_efficiency",
+            score: 0,
+            rawLabel: "Cost prior",
+          },
+        ],
+      },
+      {
+        name: "Cheap Enough",
+        provider: "Provider",
+        contextWindow: 128000,
+        costInputPer1M: 0.1,
+        costOutputPer1M: 0.5,
+        scores: [
+          {
+            source: "catalog_prior",
+            dimension: "coding",
+            score: 50,
+            rawLabel: "Coding prior",
+          },
+          {
+            source: "catalog_prior",
+            dimension: "cost_efficiency",
+            score: 100,
+            rawLabel: "Cost prior",
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Build a simple integration cheaply.",
+          preferences: { costSensitive: true },
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.dimensions.cost_efficiency).toBeGreaterThanOrEqual(0.75);
+    expect(body.recommendations[0].model.name).toBe("Cheap Enough");
+  });
+
+  it("applies long-context preferences before ranking", async () => {
+    mockInterpretTask.mockResolvedValue({
+      refused: false,
+      dimensions: {
+        reasoning: 0,
+        coding: 1,
+        math: 0,
+        instruction_following: 0,
+        overall: 0,
+        speed: 0,
+        cost_efficiency: 0,
+      },
+      summary: "A coding task with long files.",
+    });
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "GPT-5.5",
+        provider: "OpenAI",
+        contextWindow: 1000000,
+        costInputPer1M: 5,
+        costOutputPer1M: 30,
+        scores: [
+          {
+            source: "catalog_prior",
+            dimension: "coding",
+            score: 70,
+            rawLabel: "Coding prior",
+          },
+        ],
+      },
+      {
+        name: "Claude Opus 4.5",
+        provider: "Anthropic",
+        contextWindow: 200000,
+        costInputPer1M: 5,
+        costOutputPer1M: 25,
+        scores: [
+          {
+            source: "catalog_prior",
+            dimension: "coding",
+            score: 99,
+            rawLabel: "Coding prior",
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Build an agent over a huge repository.",
+          preferences: { needsLongContext: true },
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.dimensions.long_context).toBe(1);
+    expect(body.recommendations).toHaveLength(1);
+    expect(body.recommendations[0].model.name).toBe("GPT-5.5");
+  });
+
+  it("does not return hosted models when local-only is selected", async () => {
+    mockInterpretTask.mockResolvedValue({
+      refused: false,
+      dimensions: {
+        reasoning: 0,
+        coding: 1,
+        math: 0,
+        instruction_following: 0,
+        overall: 0,
+        speed: 0,
+        cost_efficiency: 0,
+      },
+      summary: "A coding task that must stay local.",
+    });
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "Hosted Model",
+        provider: "Provider",
+        contextWindow: 128000,
+        costInputPer1M: 1,
+        costOutputPer1M: 2,
+        scores: [
+          {
+            source: "catalog_prior",
+            dimension: "coding",
+            score: 90,
+            rawLabel: "Coding prior",
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Pick a local-only coding model.",
+          preferences: { localOnly: true },
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.recommendations).toEqual([]);
+  });
+
+  it("prefers frontier models when frontier candidates are available", async () => {
+    mockInterpretTask.mockResolvedValue({
+      refused: false,
+      dimensions: {
+        reasoning: 0,
+        coding: 1,
+        math: 0,
+        instruction_following: 0,
+        overall: 0,
+        speed: 0,
+        cost_efficiency: 0,
+      },
+      summary: "A coding task.",
+    });
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "GPT-4.1",
+        provider: "OpenAI",
+        contextWindow: 1000000,
+        costInputPer1M: 2,
+        costOutputPer1M: 8,
+        scores: [
+          {
+            source: "catalog_prior",
+            dimension: "coding",
+            score: 100,
+            rawLabel: "Coding prior",
+          },
+        ],
+      },
+      {
+        name: "GPT-5.5",
+        provider: "OpenAI",
+        contextWindow: 1000000,
+        costInputPer1M: 5,
+        costOutputPer1M: 30,
+        scores: [
+          {
+            source: "catalog_prior",
+            dimension: "coding",
+            score: 70,
+            rawLabel: "Coding prior",
+          },
+        ],
+      },
+      {
+        name: "Claude Opus 4.7",
+        provider: "Anthropic",
+        contextWindow: 1000000,
+        costInputPer1M: 5,
+        costOutputPer1M: 25,
+        scores: [
+          {
+            source: "catalog_prior",
+            dimension: "coding",
+            score: 80,
+            rawLabel: "Coding prior",
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Build a coding workflow.",
+          preferences: { preferFrontier: true },
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.recommendations.map((entry: { model: { name: string } }) => entry.model.name)).toEqual([
+      "Claude Opus 4.7",
+      "GPT-5.5",
+    ]);
+  });
+
   it("returns catalog and benchmark-backed models from the model catalog API", async () => {
     mockModelFindMany.mockResolvedValue([
       {
