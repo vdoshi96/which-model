@@ -2,12 +2,22 @@
  * @jest-environment jsdom
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
+import ComparePage from "@/app/compare/page";
 import { ComparisonTable } from "@/components/ComparisonTable";
 import { ModelSelector } from "@/components/ModelSelector";
 import type { ComparedModel } from "@/types/api";
 import type { TaskDimensions } from "@/types/model";
+
+const mockSearchParams = {
+  get: jest.fn(),
+  getAll: jest.fn(),
+};
+
+jest.mock("next/navigation", () => ({
+  useSearchParams: () => mockSearchParams,
+}));
 
 const comparedModels: ComparedModel[] = [
   {
@@ -104,7 +114,7 @@ describe("ModelSelector", () => {
     expect(screen.queryByText("Claude 3.5 Sonnet")).not.toBeInTheDocument();
   });
 
-  it("keeps selected models in a compact strip and bounds the option list", () => {
+  it("shows selected models as compact removable chips instead of oversized tiles", () => {
     const { container } = render(
       <ModelSelector
         models={["Claude 3.5 Sonnet", "GPT-4o", "Gemini 1.5 Pro"]}
@@ -117,13 +127,81 @@ describe("ModelSelector", () => {
       "Claude 3.5 Sonnet",
     );
     expect(screen.getByTestId("selected-models-strip")).toHaveTextContent("GPT-4o");
-    expect(screen.getByTestId("model-options-list")).toHaveClass("max-h-80");
-    expect(container.querySelectorAll("label")).toHaveLength(4);
+    expect(screen.getByTestId("selected-models-strip")).toHaveClass("min-h-10");
+    expect(screen.getByTestId("selected-models-strip")).not.toHaveClass(
+      "grid",
+    );
+    expect(screen.getByLabelText("Remove Claude 3.5 Sonnet")).toHaveClass(
+      "max-w-48",
+      "truncate",
+    );
+    expect(container.querySelectorAll('[data-testid="selected-model-chip"]')).toHaveLength(2);
+  });
+
+  it("renders a dense scan-friendly option list with clear selected state", () => {
+    render(
+      <ModelSelector
+        models={["Claude 3.5 Sonnet", "GPT-4o", "Gemini 1.5 Pro"]}
+        onChange={() => undefined}
+        selectedModels={["Claude 3.5 Sonnet"]}
+      />,
+    );
+
+    const list = screen.getByTestId("model-options-list");
+    expect(list).toHaveClass("max-h-72", "divide-y");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+    const selectedOption = screen.getByLabelText("Claude 3.5 Sonnet");
+    expect(selectedOption).toHaveAttribute("aria-checked", "true");
+    expect(selectedOption.closest("label")).toHaveClass(
+      "min-h-10",
+      "bg-surface",
+      "text-accent",
+    );
+  });
+});
+
+describe("ComparePage", () => {
+  beforeEach(() => {
+    mockSearchParams.get.mockImplementation((key: string) => {
+      if (key === "models") {
+        return "Claude 3.5 Sonnet,GPT-4o";
+      }
+
+      return null;
+    });
+    mockSearchParams.getAll.mockReturnValue([]);
+    window.localStorage.clear();
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        models: [
+          { name: "Claude 3.5 Sonnet" },
+          { name: "GPT-4o" },
+          { name: "Gemini 1.5 Pro" },
+        ],
+      }),
+    })) as jest.Mock;
+  });
+
+  it("keeps the compare action in a sticky command bar above available models", async () => {
+    const { container } = render(<ComparePage />);
+
+    const commandBar = await screen.findByTestId("compare-command-bar");
+    const selector = await screen.findByTestId("model-selector");
+
+    expect(commandBar).toHaveClass("sticky", "top-16");
+    expect(within(commandBar).getByRole("button", { name: /compare models/i }))
+      .toBeInTheDocument();
+    expect(commandBar.compareDocumentPosition(selector)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(container.querySelector("[data-testid='compare-command-bar'] + [data-testid='model-selector']"))
+      .toBe(selector);
   });
 });
 
 describe("ComparisonTable", () => {
-  it("highlights the weighted-score winner and renders missing data as N/A", () => {
+  it("highlights the weighted-score winner and explains unavailable evidence", () => {
     render(<ComparisonTable dimensions={taskDimensions} models={comparedModels} />);
 
     expect(screen.getByText("Winner")).toBeInTheDocument();
@@ -134,8 +212,9 @@ describe("ComparisonTable", () => {
     expect(screen.getByText("Context window")).toBeInTheDocument();
     expect(screen.getByText("Evidence gaps")).toBeInTheDocument();
     expect(
-      screen.getByText("Creative writing: catalog has no dedicated rows yet"),
+      screen.getByText("Creative writing: curated evidence unavailable"),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Not an N\/A placeholder/)).toBeInTheDocument();
   });
 
   it("uses mobile horizontal scrolling and score color classes", () => {

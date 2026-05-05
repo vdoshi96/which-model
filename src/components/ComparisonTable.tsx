@@ -71,7 +71,7 @@ function uniqueEvidenceGaps(models: ComparedModel[]) {
       models.flatMap((model) => [
         ...(model.unavailableEvidence ?? []).map(
           (dimension) =>
-            `${DIMENSION_LABELS[dimension as ExtendedBenchmarkDimension] ?? dimension}: catalog has no dedicated rows yet`,
+            `${DIMENSION_LABELS[dimension as ExtendedBenchmarkDimension] ?? dimension}: curated evidence unavailable`,
         ),
         ...(model.missingEvidence ?? []).map(
           (dimension) =>
@@ -98,7 +98,7 @@ export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
   return (
     <div className="border border-border bg-surface">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
+        <table className="w-full min-w-[640px] table-fixed border-collapse text-sm">
           <thead>
             <tr>
               <th className="sticky left-0 z-10 w-40 border-b border-border bg-surface p-3 text-left sm:w-52">
@@ -182,6 +182,10 @@ export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
       {evidenceGaps.length > 0 ? (
         <div className="border-t border-border bg-bg p-3 text-xs text-secondary">
           <div className="font-mono uppercase">Evidence gaps</div>
+          <p className="mt-1">
+            Not an N/A placeholder: these notes show where curated benchmark
+            evidence is missing or unavailable.
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {evidenceGaps.map((gap) => (
               <span className="border border-border px-2 py-1" key={gap}>

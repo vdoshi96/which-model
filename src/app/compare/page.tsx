@@ -321,10 +321,16 @@ function ComparePageContent() {
         </div>
       </div>
 
-      <div className="sticky top-16 z-20 flex flex-col gap-3 border border-border bg-bg/95 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-        <p className="min-w-0 text-sm text-secondary">
+      <div
+        className="sticky top-16 z-20 flex flex-col gap-2 border border-border bg-bg/95 p-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+        data-testid="compare-command-bar"
+      >
+        <p className="min-w-0 truncate text-sm text-secondary">
+          <span className="font-mono text-xs uppercase text-primary">
+            Compare
+          </span>{" "}
           {selectedModels.length > 0
-            ? `Selected: ${selectedModels.length} models - ${selectedSummary}`
+            ? `${selectedModels.length} selected - ${selectedSummary}`
             : "Choose recommended models to compare."}
         </p>
         <Button

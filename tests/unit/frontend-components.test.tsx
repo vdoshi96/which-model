@@ -9,12 +9,15 @@ import { ModelCard } from "@/components/ModelCard";
 import { RankingList } from "@/components/RankingList";
 import { SplashScreen } from "@/components/SplashScreen";
 import { TaskInput } from "@/components/TaskInput";
+import ResultsPage from "@/app/results/page";
 import type { RankedModel } from "@/types/model";
 
 const push = jest.fn();
+let searchParams = new URLSearchParams();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+  useSearchParams: () => searchParams,
 }));
 
 const recommendation: RankedModel = {
@@ -121,6 +124,75 @@ describe("ModelCard", () => {
     expect(screen.getByText("Cost unavailable")).toBeInTheDocument();
     expect(screen.getByText("Context unavailable")).toBeInTheDocument();
   });
+
+  it("shows transparent scoring evidence, top contributions, evidence gaps, and provenance", () => {
+    render(
+      <ModelCard
+        recommendation={{
+          ...recommendation,
+          evidenceCount: 7,
+          missingEvidence: ["tool_use"],
+          unavailableEvidence: ["creative_writing"],
+          provenanceSummary: {
+            measured: 2,
+            editorial_prior: 3,
+            derived_metadata: 2,
+          },
+          contributions: [
+            {
+              label: "reasoning",
+              value: 0.93,
+              weight: 0.8,
+              contribution: 0.744,
+            },
+            {
+              label: "coding",
+              value: 0.88,
+              weight: 0.6,
+              contribution: 0.528,
+            },
+            {
+              label: "tool_use",
+              value: 0.7,
+              weight: 0.4,
+              contribution: 0.28,
+            },
+            {
+              label: "speed",
+              value: 0.5,
+              weight: 0.2,
+              contribution: 0.1,
+            },
+          ],
+          rationale:
+            "Claude 3.5 Sonnet ranks from reasoning and coding signals across 7 curated score rows.",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("7 scoring signals")).toBeInTheDocument();
+    expect(screen.getByText("Top contributions")).toBeInTheDocument();
+    expect(screen.getByText("Reasoning")).toBeInTheDocument();
+    expect(screen.getByText("value 0.93")).toBeInTheDocument();
+    expect(screen.getByText("weight 0.80")).toBeInTheDocument();
+    expect(screen.getByText("Coding")).toBeInTheDocument();
+    expect(screen.getByText("Tool use")).toBeInTheDocument();
+    expect(screen.queryByText("Speed")).not.toBeInTheDocument();
+    expect(screen.getByText("Missing: Tool use")).toBeInTheDocument();
+    expect(
+      screen.getByText("Unavailable: Creative writing"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Provenance")).toBeInTheDocument();
+    expect(screen.getByText(/measured: 2/)).toBeInTheDocument();
+    expect(screen.getByText(/editorial prior: 3/)).toBeInTheDocument();
+    expect(screen.getByText(/derived metadata: 2/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Claude 3.5 Sonnet ranks from reasoning and coding signals across 7 curated score rows.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/measured editorial prior/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("RankingList", () => {
@@ -144,6 +216,7 @@ describe("RankingList", () => {
 describe("TaskInput", () => {
   beforeEach(() => {
     push.mockReset();
+    searchParams = new URLSearchParams();
     window.localStorage.clear();
     window.sessionStorage.clear();
     global.fetch = jest.fn((input) => {
@@ -274,6 +347,46 @@ describe("TaskInput", () => {
         }),
       );
     });
+  });
+});
+
+describe("ResultsPage", () => {
+  beforeEach(() => {
+    push.mockReset();
+    searchParams = new URLSearchParams({ task: "write a launch poem" });
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({
+          taskSummary: "Creative writing needs broad quality.",
+          dimensions: {
+            reasoning: 0.2,
+            coding: 0,
+            math: 0,
+            instruction_following: 0.8,
+            creative_writing: 0.9,
+            overall: 0.9,
+            tool_use: 0,
+            speed: 0,
+            cost_efficiency: 0,
+            long_context: 0,
+          },
+          recommendations: [recommendation],
+        }),
+      }),
+    ) as jest.Mock;
+  });
+
+  it("explains that ranking uses available metadata and cost only when requested", async () => {
+    render(<ResultsPage />);
+
+    expect(
+      await screen.findByText(
+        "Ranked by task weights, curated benchmark signals, preferences, and available model metadata. Cost affects ranking only when cost sensitivity is requested.",
+      ),
+    ).toBeInTheDocument();
   });
 });
 

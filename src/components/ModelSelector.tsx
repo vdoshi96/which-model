@@ -50,7 +50,10 @@ export function ModelSelector({
   }
 
   return (
-    <div className="space-y-4 border border-border bg-surface p-4" data-testid="model-selector">
+    <div
+      className="space-y-3 border border-border bg-surface p-3 sm:p-4"
+      data-testid="model-selector"
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <label className="block flex-1 space-y-1">
           <span className="font-mono text-xs uppercase text-secondary">
@@ -68,22 +71,23 @@ export function ModelSelector({
       </div>
 
       <div
-        className="flex min-h-11 flex-wrap items-center gap-2 border border-border bg-bg p-2"
+        className="flex min-h-10 flex-wrap items-center gap-1.5 border border-border bg-bg p-1.5"
         data-testid="selected-models-strip"
       >
         {selectedModels.length > 0 ? (
           selectedModels.map((model) => (
             <button
-              className="inline-flex max-w-full items-center gap-2 border border-accent/70 bg-surface px-2.5 py-1.5 text-left font-mono text-xs text-primary transition hover:border-accent"
+              aria-label={`Remove ${model}`}
+              className="inline-flex h-7 max-w-48 items-center gap-1.5 truncate border border-accent/70 bg-surface px-2 text-left font-mono text-xs text-primary transition hover:border-accent focus:border-accent focus:outline-none"
+              data-testid="selected-model-chip"
               key={model}
               onClick={() => toggleModel(model)}
               type="button"
             >
-              <span className="truncate">{model}</span>
+              <span className="min-w-0 truncate">{model}</span>
               <span aria-hidden="true" className="text-accent">
                 x
               </span>
-              <span className="sr-only">Remove {model}</span>
             </button>
           ))
         ) : (
@@ -104,8 +108,8 @@ export function ModelSelector({
         </p>
       ) : null}
 
-      <div
-        className="max-h-80 overflow-y-auto border border-border bg-bg"
+      <ul
+        className="max-h-72 divide-y divide-border overflow-y-auto border border-border bg-bg"
         data-testid="model-options-list"
       >
         {filteredModels.length > 0 ? (
@@ -114,34 +118,43 @@ export function ModelSelector({
             const disabled = !checked && atMaximum;
 
             return (
-              <label
-                className={cn(
-                  "flex min-h-12 items-center gap-3 border-b border-border px-3 py-2 text-sm transition last:border-b-0",
-                  disabled
-                    ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer hover:bg-surface",
-                  checked && "bg-surface text-accent",
-                )}
-                key={model}
-              >
-                <input
-                  checked={checked}
-                  disabled={disabled}
-                  onChange={() => toggleModel(model)}
-                  type="checkbox"
-                />
-                <span className="min-w-0 flex-1 break-words font-mono leading-5">
-                  {model}
-                </span>
-              </label>
+              <li key={model}>
+                <label
+                  className={cn(
+                    "flex min-h-10 items-center gap-2 px-3 py-1.5 text-sm transition",
+                    disabled
+                      ? "cursor-not-allowed opacity-50"
+                      : "cursor-pointer hover:bg-surface",
+                    checked && "bg-surface text-accent",
+                  )}
+                >
+                  <input
+                    aria-checked={checked}
+                    aria-label={model}
+                    checked={checked}
+                    className="h-4 w-4"
+                    disabled={disabled}
+                    onChange={() => toggleModel(model)}
+                    type="checkbox"
+                  />
+                  <span className="min-w-0 flex-1 truncate font-mono leading-5">
+                    {model}
+                  </span>
+                  {checked ? (
+                    <span className="font-mono text-[11px] uppercase text-accent">
+                      Selected
+                    </span>
+                  ) : null}
+                </label>
+              </li>
             );
           })
         ) : (
-          <div className="p-4 text-sm text-secondary">
+          <li className="p-4 text-sm text-secondary">
             No matching models found.
-          </div>
+          </li>
         )}
-      </div>
+      </ul>
     </div>
   );
 }

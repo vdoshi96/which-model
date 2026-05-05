@@ -242,10 +242,9 @@ function ResultsPageContent() {
             <div>
               <h2 className="font-mono text-xl font-semibold">Top 10 ranking</h2>
               <p className="mt-1 text-sm text-secondary">
-                Ranked by task weights, benchmark signals, and catalog priors
-                when public benchmark coverage is sparse. Cost affects the
-                score only when the task asks for cost efficiency and cost data
-                is available.
+                Ranked by task weights, curated benchmark signals, preferences,
+                and available model metadata. Cost affects ranking only when
+                cost sensitivity is requested.
               </p>
             </div>
             <Button
