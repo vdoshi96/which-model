@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import ComparePage from "@/app/compare/page";
 import { ComparisonTable } from "@/components/ComparisonTable";
@@ -163,6 +163,10 @@ describe("ModelSelector", () => {
 describe("ComparePage", () => {
   beforeEach(() => {
     mockSearchParams.get.mockImplementation((key: string) => {
+      if (key === "task") {
+        return "making UI changes";
+      }
+
       if (key === "models") {
         return "Claude 3.5 Sonnet,GPT-4o";
       }
@@ -197,6 +201,76 @@ describe("ComparePage", () => {
     );
     expect(container.querySelector("[data-testid='compare-command-bar'] + [data-testid='model-selector']"))
       .toBe(selector);
+  });
+
+  it("shows comparison results as the same ranked cards used by normal recommendations", async () => {
+    (global.fetch as jest.Mock).mockImplementation(async (input) => {
+      if (input === "/api/compare") {
+        return {
+          ok: true,
+          json: async () => ({
+            taskSummary: "UI work needs coding and instruction following.",
+            dimensions: taskDimensions,
+            models: [
+              {
+                ...comparedModels[0],
+                benchmarksUsed: [],
+                evidenceCount: 2,
+              },
+              {
+                ...comparedModels[1],
+                benchmarksUsed: [],
+                evidenceCount: 2,
+              },
+              {
+                ...comparedModels[0],
+                name: "Gemini 1.5 Pro",
+                weightedScore: 82.4,
+                benchmarksUsed: [],
+                evidenceCount: 2,
+              },
+            ],
+          }),
+        };
+      }
+
+      if (input === "/api/recommend") {
+        return {
+          ok: true,
+          json: async () => ({
+            taskSummary: "UI work needs coding and instruction following.",
+            dimensions: taskDimensions,
+            recommendations: [],
+          }),
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({
+          models: [
+            { name: "Claude 3.5 Sonnet" },
+            { name: "GPT-4o" },
+            { name: "Gemini 1.5 Pro" },
+          ],
+        }),
+      };
+    });
+
+    render(<ComparePage />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /compare models/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Top 5 ranking")).toBeInTheDocument();
+    });
+    expect(screen.getByText("#1")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Claude 3.5 Sonnet" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Winner")).not.toBeInTheDocument();
   });
 });
 

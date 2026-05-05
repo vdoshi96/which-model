@@ -3,20 +3,19 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { ComparisonTable } from "@/components/ComparisonTable";
+import { DimensionWeights } from "@/components/DimensionWeights";
 import { ModelSelector } from "@/components/ModelSelector";
+import { RankingList } from "@/components/RankingList";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
-import {
-  buildInitialCompareSelection,
-  mergeSelectedWithRecommendations,
-} from "@/lib/compareSelection";
+import { buildInitialCompareSelection } from "@/lib/compareSelection";
 import type {
   ApiError,
   CompareResponse,
   ModelsResponse,
   RecommendResponse,
 } from "@/types/api";
+import type { RankedModel } from "@/types/model";
 
 const MAX_MODELS = 5;
 const MIN_MODELS = 2;
@@ -87,6 +86,27 @@ function getErrorMessage(payload: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function toRankedRecommendations(comparison: CompareResponse): RankedModel[] {
+  return comparison.models.map((model, index) => ({
+    rank: index + 1,
+    model: {
+      name: model.name,
+      provider: model.provider,
+      contextWindow: model.contextWindow,
+      costInputPer1M: model.costInputPer1M,
+      costOutputPer1M: model.costOutputPer1M ?? null,
+    },
+    score: model.weightedScore,
+    benchmarksUsed: model.benchmarksUsed ?? [],
+    evidenceCount: model.evidenceCount,
+    missingEvidence: model.missingEvidence,
+    unavailableEvidence: model.unavailableEvidence,
+    provenanceSummary: model.provenanceSummary,
+    contributions: model.contributions,
+    rationale: model.rationale,
+  }));
 }
 
 function ComparePageContent() {
@@ -195,19 +215,10 @@ function ComparePageContent() {
         setModelOptions((current) =>
           uniqueModelNames([...current, ...recommendedNames]),
         );
-        setSelectedModels((current) => {
-          const mergedSelection = mergeSelectedWithRecommendations({
-            recommendedNames,
-            selectedModels: current,
-          });
-
-          window.localStorage.setItem(
-            RECOMMENDATIONS_STORAGE_KEY,
-            JSON.stringify(mergedSelection),
-          );
-
-          return mergedSelection;
-        });
+        window.localStorage.setItem(
+          RECOMMENDATIONS_STORAGE_KEY,
+          JSON.stringify(recommendedNames),
+        );
         setRecommendedTask(trimmedTask);
         setRecommendationStatus("Loaded");
       } catch (requestError) {
@@ -237,6 +248,10 @@ function ComparePageContent() {
   const selectedSummary = useMemo(
     () => selectedModels.join(", "),
     [selectedModels],
+  );
+  const comparedRecommendations = useMemo(
+    () => (comparison ? toRankedRecommendations(comparison) : []),
+    [comparison],
   );
 
   async function handleCompare() {
@@ -285,7 +300,8 @@ function ComparePageContent() {
           Compare models
         </h1>
         <p className="max-w-2xl text-secondary">
-          Select two to five models for a task-specific comparison.
+          Pick two or more anchor models. The comparison fills open slots with
+          curated recommendations for this task.
         </p>
       </div>
 
@@ -352,10 +368,30 @@ function ComparePageContent() {
         selectedModels={selectedModels}
       />
 
-      <ComparisonTable
-        dimensions={comparison?.dimensions}
-        models={comparison?.models ?? []}
-      />
+      {comparison ? (
+        <>
+          <div className="border border-border bg-surface p-5">
+            <p className="font-mono text-xs uppercase text-secondary">
+              Task summary
+            </p>
+            <p className="mt-2 text-base leading-7 text-primary">
+              {comparison.taskSummary}
+            </p>
+          </div>
+
+          <DimensionWeights dimensions={comparison.dimensions} />
+
+          <div>
+            <h2 className="font-mono text-xl font-semibold">Top 5 ranking</h2>
+            <p className="mt-1 text-sm text-secondary">
+              Your selected models stay in the shortlist; remaining slots are
+              filled by the same curated ranking used for normal recommendations.
+            </p>
+          </div>
+
+          <RankingList recommendations={comparedRecommendations} />
+        </>
+      ) : null}
     </section>
   );
 }

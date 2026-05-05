@@ -40,11 +40,13 @@ export function rankCuratedModels({
   intent,
   preferences,
   limit = 10,
+  requiredModelIds = [],
 }: {
   catalog: CuratedCatalog;
   intent: RecommendationIntent;
   preferences: RecommendationPreferences;
   limit?: number;
+  requiredModelIds?: string[];
 }): RankedModel[] {
   const benchmarksById = new Map(
     catalog.benchmarks.map((benchmark) => [benchmark.id, benchmark]),
@@ -55,7 +57,11 @@ export function rankCuratedModels({
       .filter((category): category is BenchmarkCategory => category !== undefined),
   );
   const scoresByModel = groupScoresByModel(catalog.scores, benchmarksById);
-  const candidates = applyPreferenceFilters(catalog.models, preferences);
+  const candidates = includeRequiredModels({
+    allModels: catalog.models,
+    candidates: applyPreferenceFilters(catalog.models, preferences),
+    requiredModelIds,
+  });
 
   return candidates
     .map((model) =>
@@ -72,6 +78,31 @@ export function rankCuratedModels({
     .sort(compareRankedModels)
     .slice(0, limit)
     .map(({ status: _status, ...entry }, index) => ({ ...entry, rank: index + 1 }));
+}
+
+function includeRequiredModels({
+  allModels,
+  candidates,
+  requiredModelIds,
+}: {
+  allModels: CuratedCatalogModel[];
+  candidates: CuratedCatalogModel[];
+  requiredModelIds: string[];
+}) {
+  if (requiredModelIds.length === 0) {
+    return candidates;
+  }
+
+  const candidateMap = new Map(candidates.map((model) => [model.id, model]));
+  const requiredIds = new Set(requiredModelIds);
+
+  for (const model of allModels) {
+    if (requiredIds.has(model.id)) {
+      candidateMap.set(model.id, model);
+    }
+  }
+
+  return Array.from(candidateMap.values());
 }
 
 function groupScoresByModel(

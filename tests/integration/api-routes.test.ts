@@ -674,6 +674,34 @@ describe("recommend and compare API routes", () => {
     });
   });
 
+  it("fills a two-model comparison with curated recommendation candidates", async () => {
+    const { POST } = await import("@/app/api/compare/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/compare", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Pick a coding model for making UI changes.",
+          modelNames: ["GPT-4.1", "DeepSeek V4 Flash"],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    const names = body.models.map((model: { name: string }) => model.name);
+
+    expect(names).toHaveLength(5);
+    expect(names).toEqual(
+      expect.arrayContaining(["GPT-4.1", "DeepSeek V4 Flash"]),
+    );
+    expect(
+      names.filter(
+        (name: string) => !["GPT-4.1", "DeepSeek V4 Flash"].includes(name),
+      ),
+    ).toHaveLength(3);
+  });
+
   it("compares catalog models with metadata and evidence", async () => {
     const { POST } = await import("@/app/api/compare/route");
 
@@ -688,26 +716,28 @@ describe("recommend and compare API routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      models: [
-        expect.objectContaining({
-          name: "GPT-5.5",
-          weightedScore: expect.any(Number),
+    const body = await response.json();
+    const names = body.models.map((model: { name: string }) => model.name);
+    const sonnet = body.models.find(
+      (model: { name: string }) => model.name === "Claude Sonnet 4.6",
+    );
+
+    expect(names).toEqual(
+      expect.arrayContaining(["GPT-5.5", "Claude Sonnet 4.6"]),
+    );
+    expect(sonnet).toEqual(
+      expect.objectContaining({
+        provider: "Anthropic",
+        contextWindow: 1_000_000,
+        costInputPer1M: 3,
+        weightedScore: expect.any(Number),
+        evidenceCount: 7,
+        scores: expect.objectContaining({
+          reasoning: expect.any(Number),
+          creative_writing: null,
         }),
-        expect.objectContaining({
-          name: "Claude Sonnet 4.6",
-          provider: "Anthropic",
-          contextWindow: 1_000_000,
-          costInputPer1M: 3,
-          weightedScore: expect.any(Number),
-          evidenceCount: 7,
-          scores: expect.objectContaining({
-            reasoning: expect.any(Number),
-            creative_writing: null,
-          }),
-        }),
-      ],
-    });
+      }),
+    );
   });
 
   it("compares catalog-only frontier models with curated priors for broad creative tasks", async () => {
@@ -739,9 +769,15 @@ describe("recommend and compare API routes", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.models).toEqual([
+    const gpt = body.models.find(
+      (model: { name: string }) => model.name === "GPT-5.5",
+    );
+    const opus = body.models.find(
+      (model: { name: string }) => model.name === "Claude Opus 4.7",
+    );
+
+    expect(gpt).toEqual(
       expect.objectContaining({
-        name: "GPT-5.5",
         contextWindow: 1_000_000,
         scores: expect.objectContaining({
           overall: expect.any(Number),
@@ -749,8 +785,9 @@ describe("recommend and compare API routes", () => {
         }),
         weightedScore: expect.any(Number),
       }),
+    );
+    expect(opus).toEqual(
       expect.objectContaining({
-        name: "Claude Opus 4.7",
         contextWindow: 1_000_000,
         scores: expect.objectContaining({
           overall: expect.any(Number),
@@ -758,9 +795,9 @@ describe("recommend and compare API routes", () => {
         }),
         weightedScore: expect.any(Number),
       }),
-    ]);
-    expect(body.models[0].weightedScore).toBeGreaterThan(80);
-    expect(body.models[1].weightedScore).toBeGreaterThan(80);
+    );
+    expect(gpt.weightedScore).toBeGreaterThan(80);
+    expect(opus.weightedScore).toBeGreaterThan(80);
   });
 
   it("uses catalog aliases when comparing a catalog display name", async () => {
@@ -777,23 +814,25 @@ describe("recommend and compare API routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      models: [
-        expect.objectContaining({
-          name: "Claude Sonnet 4.6",
-          provider: "Anthropic",
-          contextWindow: 1000000,
-          costInputPer1M: 3,
-          costOutputPer1M: 15,
-          scores: expect.objectContaining({ reasoning: expect.any(Number) }),
-          weightedScore: expect.any(Number),
-        }),
-        expect.objectContaining({
-          name: "GPT-5.5",
-          weightedScore: expect.any(Number),
-        }),
-      ],
-    });
+    const body = await response.json();
+    const names = body.models.map((model: { name: string }) => model.name);
+    const sonnet = body.models.find(
+      (model: { name: string }) => model.name === "Claude Sonnet 4.6",
+    );
+
+    expect(names).toEqual(
+      expect.arrayContaining(["Claude Sonnet 4.6", "GPT-5.5"]),
+    );
+    expect(sonnet).toEqual(
+      expect.objectContaining({
+        provider: "Anthropic",
+        contextWindow: 1000000,
+        costInputPer1M: 3,
+        costOutputPer1M: 15,
+        scores: expect.objectContaining({ reasoning: expect.any(Number) }),
+        weightedScore: expect.any(Number),
+      }),
+    );
   });
 
   it("uses catalog metadata in comparisons", async () => {
@@ -810,22 +849,24 @@ describe("recommend and compare API routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      models: [
-        expect.objectContaining({
-          name: "Gemini 3.1 Pro Preview",
-          provider: "Google",
-          contextWindow: 1_048_576,
-          costInputPer1M: 2,
-          costOutputPer1M: 12,
-          weightedScore: expect.any(Number),
-        }),
-        expect.objectContaining({
-          name: "GPT-5.5",
-          weightedScore: expect.any(Number),
-        }),
-      ],
-    });
+    const body = await response.json();
+    const names = body.models.map((model: { name: string }) => model.name);
+    const gemini = body.models.find(
+      (model: { name: string }) => model.name === "Gemini 3.1 Pro Preview",
+    );
+
+    expect(names).toEqual(
+      expect.arrayContaining(["Gemini 3.1 Pro Preview", "GPT-5.5"]),
+    );
+    expect(gemini).toEqual(
+      expect.objectContaining({
+        provider: "Google",
+        contextWindow: 1_048_576,
+        costInputPer1M: 2,
+        costOutputPer1M: 12,
+        weightedScore: expect.any(Number),
+      }),
+    );
   });
 
   it("rejects comparison when a requested model is not in the curated catalog", async () => {

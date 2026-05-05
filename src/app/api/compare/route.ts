@@ -22,10 +22,12 @@ import { compareRequestSchema } from "@/lib/validators/compare";
 import type {
   BenchmarkScore,
   ExtendedBenchmarkDimension,
+  RankedModel,
 } from "@/types/model";
 
 const TEMPORARY_INTERPRETATION_ERROR =
   "Task interpretation is temporarily unavailable. Try again shortly.";
+const MAX_COMPARE_MODELS = 5;
 
 export const runtime = "nodejs";
 
@@ -116,11 +118,8 @@ export async function POST(request: Request) {
   const selectedModels = resolvedModels
     .map((model) => model.catalogModel)
     .filter((model): model is CuratedCatalogModel => model !== undefined);
-  const preferences = {
-    ...defaultRecommendationPreferences,
-    preferFrontier: false,
-    preferredModels: selectedModels.map((model) => model.id),
-  };
+  const selectedModelIds = selectedModels.map((model) => model.id);
+  const preferences = defaultRecommendationPreferences;
   const recommendationIntent = buildRecommendationIntent({
     dimensions: interpretation.dimensions,
     preferences,
@@ -130,36 +129,18 @@ export async function POST(request: Request) {
     catalog,
     intent: recommendationIntent,
     preferences,
-    limit: selectedModels.length,
+    limit: catalog.models.length,
+    requiredModelIds: selectedModelIds,
   });
-  const rankedByName = new Map(
-    rankedModels.map((entry) => [normalizeModelName(entry.model.name), entry]),
-  );
+  const comparisonModels = buildComparisonModels({
+    catalog,
+    rankedModels,
+    selectedModels,
+  });
   const response = {
     taskSummary: recommendationIntent.summary,
     dimensions: recommendationIntent.weights,
-    models: selectedModels.map((model) => {
-      const ranked = rankedByName.get(normalizeModelName(model.name));
-      const benchmarks =
-        ranked?.benchmarksUsed ?? buildBenchmarksUsed(catalog, model);
-
-      return {
-        name: model.name,
-        provider: model.provider,
-        scores: buildCategoryScores(benchmarks),
-        weightedScore: ranked?.score ?? 0,
-        costInputPer1M: model.costInputPer1M,
-        costOutputPer1M: model.costOutputPer1M,
-        contextWindow: model.contextWindow,
-        evidenceCount: benchmarks.length,
-        missingEvidence: ranked?.missingEvidence ?? [],
-        unavailableEvidence: ranked?.unavailableEvidence ?? [],
-        provenanceSummary: ranked?.provenanceSummary ?? {},
-        benchmarksUsed: benchmarks,
-        contributions: ranked?.contributions ?? [],
-        rationale: ranked?.rationale ?? null,
-      };
-    }),
+    models: comparisonModels,
   };
 
   await getPrisma().query.create({
@@ -172,6 +153,49 @@ export async function POST(request: Request) {
   });
 
   return Response.json(response);
+}
+
+function buildComparisonModels({
+  catalog,
+  rankedModels,
+  selectedModels,
+}: {
+  catalog: CuratedCatalog;
+  rankedModels: RankedModel[];
+  selectedModels: CuratedCatalogModel[];
+}) {
+  const rankedByName = new Map(
+    rankedModels.map((entry) => [normalizeModelName(entry.model.name), entry]),
+  );
+  const selectedEntries = selectedModels.map(
+    (model) =>
+      rankedByName.get(normalizeModelName(model.name)) ??
+      buildFallbackRankedModel(catalog, model),
+  );
+  const includedNames = new Set(
+    selectedEntries.map((entry) => normalizeModelName(entry.model.name)),
+  );
+  const filledEntries = [...selectedEntries];
+
+  for (const rankedModel of rankedModels) {
+    const normalizedName = normalizeModelName(rankedModel.model.name);
+
+    if (filledEntries.length >= MAX_COMPARE_MODELS) {
+      break;
+    }
+
+    if (includedNames.has(normalizedName)) {
+      continue;
+    }
+
+    filledEntries.push(rankedModel);
+    includedNames.add(normalizedName);
+  }
+
+  return filledEntries
+    .sort(compareRankedModelsForDisplay)
+    .slice(0, MAX_COMPARE_MODELS)
+    .map(toComparedModel);
 }
 
 function toJsonValue(value: unknown): JsonObject {
@@ -212,6 +236,53 @@ function buildBenchmarksUsed(
     });
 }
 
+function buildFallbackRankedModel(
+  catalog: CuratedCatalog,
+  model: CuratedCatalogModel,
+): RankedModel {
+  const benchmarks = buildBenchmarksUsed(catalog, model);
+
+  return {
+    rank: 0,
+    model: {
+      name: model.name,
+      provider: model.provider,
+      contextWindow: model.contextWindow,
+      costInputPer1M: model.costInputPer1M,
+      costOutputPer1M: model.costOutputPer1M,
+    },
+    score: 0,
+    benchmarksUsed: benchmarks,
+    evidenceCount: benchmarks.length,
+    missingEvidence: [],
+    unavailableEvidence: [],
+    provenanceSummary: summarizeProvenance(benchmarks),
+    contributions: [],
+    rationale: null,
+  };
+}
+
+function toComparedModel(ranked: RankedModel) {
+  const benchmarks = ranked.benchmarksUsed;
+
+  return {
+    name: ranked.model.name,
+    provider: ranked.model.provider,
+    scores: buildCategoryScores(benchmarks),
+    weightedScore: ranked.score,
+    costInputPer1M: ranked.model.costInputPer1M,
+    costOutputPer1M: ranked.model.costOutputPer1M,
+    contextWindow: ranked.model.contextWindow,
+    evidenceCount: ranked.evidenceCount ?? benchmarks.length,
+    missingEvidence: ranked.missingEvidence ?? [],
+    unavailableEvidence: ranked.unavailableEvidence ?? [],
+    provenanceSummary: ranked.provenanceSummary ?? summarizeProvenance(benchmarks),
+    benchmarksUsed: benchmarks,
+    contributions: ranked.contributions ?? [],
+    rationale: ranked.rationale ?? null,
+  };
+}
+
 function buildCategoryScores(benchmarks: BenchmarkScore[]) {
   const scores = Object.fromEntries(
     COMPARE_DIMENSIONS.map((dimension) => [dimension, null]),
@@ -239,6 +310,26 @@ function buildCategoryScores(benchmarks: BenchmarkScore[]) {
   }
 
   return scores;
+}
+
+function summarizeProvenance(benchmarks: BenchmarkScore[]) {
+  return benchmarks.reduce<Record<string, number>>((summary, benchmark) => {
+    const provenance = benchmark.provenance ?? "unknown";
+
+    summary[provenance] = (summary[provenance] ?? 0) + 1;
+
+    return summary;
+  }, {});
+}
+
+function compareRankedModelsForDisplay(left: RankedModel, right: RankedModel) {
+  const scoreDifference = right.score - left.score;
+
+  if (scoreDifference !== 0) {
+    return scoreDifference;
+  }
+
+  return left.model.name.localeCompare(right.model.name);
 }
 
 function normalizeModelName(name: string): string {

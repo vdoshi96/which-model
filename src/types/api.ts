@@ -1,7 +1,9 @@
 import type {
   BenchmarkDimension,
+  BenchmarkScore,
   ExtendedBenchmarkDimension,
   RankedModel,
+  RankingContribution,
   TaskDimensions,
 } from "./model";
 
@@ -37,6 +39,9 @@ export interface ComparedModel {
   missingEvidence?: string[];
   unavailableEvidence?: string[];
   provenanceSummary?: Record<string, number>;
+  benchmarksUsed?: BenchmarkScore[];
+  contributions?: RankingContribution[];
+  rationale?: string | null;
 }
 
 export interface CompareResponse {

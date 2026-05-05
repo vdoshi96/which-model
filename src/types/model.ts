@@ -53,7 +53,7 @@ export interface RankedModel {
   unavailableEvidence?: string[];
   provenanceSummary?: Record<string, number>;
   contributions?: RankingContribution[];
-  rationale?: string;
+  rationale?: string | null;
 }
 
 export interface RankingContribution {
