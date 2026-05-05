@@ -1,11 +1,12 @@
 import { auth } from "@/lib/auth";
-import {
-  buildCatalogPriorScores,
-  shouldUseCatalogPriors,
-} from "@/lib/catalogPriors";
+import { loadCuratedCatalog } from "@/lib/curatedCatalog/loadCatalog";
+import type {
+  BenchmarkCategory,
+  CuratedCatalog,
+  CuratedCatalogModel,
+} from "@/lib/curatedCatalog/schema";
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
-import { findCatalogModel, type CuratedModel } from "@/lib/modelCatalog";
 import {
   assertRateLimit,
   buildRateLimitKey,
@@ -13,12 +14,15 @@ import {
   RateLimitError,
 } from "@/lib/rateLimit";
 import {
-  buildDimensionScores,
-  calculateWeightedScore,
-  isUsableBenchmarkScore,
-} from "@/lib/scoring";
+  buildRecommendationIntent,
+  defaultRecommendationPreferences,
+} from "@/lib/recommendation/preferences";
+import { rankCuratedModels } from "@/lib/recommendation/rankCuratedModels";
 import { compareRequestSchema } from "@/lib/validators/compare";
-import type { BenchmarkDimension, BenchmarkScore } from "@/types/model";
+import type {
+  BenchmarkScore,
+  ExtendedBenchmarkDimension,
+} from "@/types/model";
 
 const TEMPORARY_INTERPRETATION_ERROR =
   "Task interpretation is temporarily unavailable. Try again shortly.";
@@ -33,20 +37,19 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 type JsonObject = { [key: string]: JsonValue };
-type ScoreRecord = {
-  source: string;
-  dimension: string;
-  score: number;
-  rawLabel?: string | null;
-};
-type ComparedModelRecord = {
-  name: string;
-  provider: string;
-  contextWindow: number | null;
-  costInputPer1M: number | null;
-  costOutputPer1M: number | null;
-  scores: ScoreRecord[];
-};
+
+const COMPARE_DIMENSIONS: ExtendedBenchmarkDimension[] = [
+  "reasoning",
+  "coding",
+  "math",
+  "instruction_following",
+  "creative_writing",
+  "overall",
+  "tool_use",
+  "speed",
+  "cost_efficiency",
+  "long_context",
+];
 
 function logRouteError(message: string, ipAddress: string, error: unknown) {
   console.error(message, {
@@ -54,26 +57,6 @@ function logRouteError(message: string, ipAddress: string, error: unknown) {
     ipAddress,
     error: error instanceof Error ? error.message : String(error),
   });
-}
-
-function toBenchmarkScores(
-  scores: Array<{
-    source: string;
-    dimension: string;
-    score: number;
-    rawLabel?: string | null;
-  }>,
-): BenchmarkScore[] {
-  return scores
-    .filter((score) =>
-      isUsableBenchmarkScore(score),
-    )
-    .map((score) => ({
-      source: score.source,
-      dimension: score.dimension as BenchmarkDimension,
-      score: score.score,
-      rawLabel: score.rawLabel,
-    }));
 }
 
 export async function POST(request: Request) {
@@ -117,75 +100,69 @@ export async function POST(request: Request) {
     return Response.json({ error: interpretation.reason }, { status: 400 });
   }
 
-  const prisma = getPrisma();
-  const requestedCatalogModels = parsed.data.modelNames
-    .map((modelName) => findCatalogModel(modelName))
-    .filter((model): model is CuratedModel => model !== undefined);
-  const lookupNames = Array.from(
-    new Set([
-      ...parsed.data.modelNames,
-      ...requestedCatalogModels.map((model) => model.name),
-      ...requestedCatalogModels.flatMap((model) => [
-        ...(model.apiId ? [model.apiId] : []),
-        ...model.aliases,
-      ]),
-    ]),
-  );
-  const models = (await prisma.model.findMany({
-    where: { name: { in: lookupNames } },
-    include: { scores: true },
-  })) as ComparedModelRecord[];
-  const modelsByNormalizedName = buildModelLookup(models);
-  const useCatalogPriors = shouldUseCatalogPriors(interpretation.dimensions);
-  const resolvedModels = parsed.data.modelNames.map((modelName) => {
-    const catalogModel = findCatalogModel(modelName);
-    const model =
-      modelsByNormalizedName.get(normalizeModelName(modelName)) ??
-      (catalogModel
-        ? modelsByNormalizedName.get(normalizeModelName(catalogModel.name))
-        : undefined);
+  const catalog = loadCuratedCatalog();
+  const resolvedModels = parsed.data.modelNames.map((modelName) => ({
+    catalogModel: findCuratedModel(catalog.models, modelName),
+    requestedName: modelName,
+  }));
 
-    return { catalogModel, model, requestedName: modelName };
-  });
-
-  if (
-    resolvedModels.some(
-      (resolved) => resolved.model === undefined && resolved.catalogModel === undefined,
-    )
-  ) {
+  if (resolvedModels.some((model) => model.catalogModel === undefined)) {
     return Response.json(
       { error: "One or more requested models were not found." },
       { status: 404 },
     );
   }
 
-  const response = {
-    taskSummary: interpretation.summary,
+  const selectedModels = resolvedModels
+    .map((model) => model.catalogModel)
+    .filter((model): model is CuratedCatalogModel => model !== undefined);
+  const preferences = {
+    ...defaultRecommendationPreferences,
+    preferFrontier: false,
+    preferredModels: selectedModels.map((model) => model.id),
+  };
+  const recommendationIntent = buildRecommendationIntent({
     dimensions: interpretation.dimensions,
-    models: resolvedModels.map(({ catalogModel, model, requestedName }) => {
-      const benchmarks = [
-        ...toBenchmarkScores(model?.scores ?? []),
-        ...(useCatalogPriors && catalogModel
-          ? buildCatalogPriorScores(catalogModel)
-          : []),
-      ];
-      const name = catalogModel?.name ?? model?.name ?? requestedName;
+    preferences,
+    summary: interpretation.summary,
+  });
+  const rankedModels = rankCuratedModels({
+    catalog,
+    intent: recommendationIntent,
+    preferences,
+    limit: selectedModels.length,
+  });
+  const rankedByName = new Map(
+    rankedModels.map((entry) => [normalizeModelName(entry.model.name), entry]),
+  );
+  const response = {
+    taskSummary: recommendationIntent.summary,
+    dimensions: recommendationIntent.weights,
+    models: selectedModels.map((model) => {
+      const ranked = rankedByName.get(normalizeModelName(model.name));
+      const benchmarks =
+        ranked?.benchmarksUsed ?? buildBenchmarksUsed(catalog, model);
 
       return {
-        name,
-        provider: model?.provider || catalogModel?.provider || "Unknown",
-        scores: buildDimensionScores(benchmarks),
-        weightedScore: calculateWeightedScore(benchmarks, interpretation.dimensions),
-        costInputPer1M:
-          model?.costInputPer1M ?? catalogModel?.costInputPer1M ?? null,
-        costOutputPer1M:
-          model?.costOutputPer1M ?? catalogModel?.costOutputPer1M ?? null,
-        contextWindow: model?.contextWindow ?? catalogModel?.contextWindow ?? null,
+        name: model.name,
+        provider: model.provider,
+        scores: buildCategoryScores(benchmarks),
+        weightedScore: ranked?.score ?? 0,
+        costInputPer1M: model.costInputPer1M,
+        costOutputPer1M: model.costOutputPer1M,
+        contextWindow: model.contextWindow,
+        evidenceCount: benchmarks.length,
+        missingEvidence: ranked?.missingEvidence ?? [],
+        unavailableEvidence: ranked?.unavailableEvidence ?? [],
+        provenanceSummary: ranked?.provenanceSummary ?? {},
+        benchmarksUsed: benchmarks,
+        contributions: ranked?.contributions ?? [],
+        rationale: ranked?.rationale ?? null,
       };
     }),
   };
 
-  await prisma.query.create({
+  await getPrisma().query.create({
     data: {
       taskText: parsed.data.task,
       ipAddress,
@@ -201,30 +178,69 @@ function toJsonValue(value: unknown): JsonObject {
   return JSON.parse(JSON.stringify(value)) as JsonObject;
 }
 
-function normalizeModelName(name: string): string {
-  return name.trim().toLowerCase();
+function findCuratedModel(models: CuratedCatalogModel[], name: string) {
+  const normalizedName = normalizeModelName(name);
+
+  return models.find((model) =>
+    [model.id, model.name, ...model.apiIds, ...model.aliases].some(
+      (candidate) => normalizeModelName(candidate) === normalizedName,
+    ),
+  );
 }
 
-function buildModelLookup(models: ComparedModelRecord[]) {
-  const modelsByNormalizedName = new Map<string, ComparedModelRecord>();
+function buildBenchmarksUsed(
+  catalog: CuratedCatalog,
+  model: CuratedCatalogModel,
+): BenchmarkScore[] {
+  const benchmarksById = new Map(
+    catalog.benchmarks.map((benchmark) => [benchmark.id, benchmark]),
+  );
 
-  for (const model of models) {
-    modelsByNormalizedName.set(normalizeModelName(model.name), model);
+  return catalog.scores
+    .filter((score) => score.modelId === model.id)
+    .map((score) => {
+      const benchmark = benchmarksById.get(score.benchmarkId);
 
-    const catalogModel = findCatalogModel(model.name);
+      return {
+        source: score.benchmarkId,
+        dimension: benchmark?.category ?? "overall",
+        score: score.normalizedScore,
+        rawLabel: score.rawLabel,
+        provenance: score.provenance,
+        sourceUrl: score.sourceUrl,
+      };
+    });
+}
 
-    if (catalogModel) {
-      modelsByNormalizedName.set(normalizeModelName(catalogModel.name), model);
+function buildCategoryScores(benchmarks: BenchmarkScore[]) {
+  const scores = Object.fromEntries(
+    COMPARE_DIMENSIONS.map((dimension) => [dimension, null]),
+  ) as Record<ExtendedBenchmarkDimension, number | null>;
+  const counts = Object.fromEntries(
+    COMPARE_DIMENSIONS.map((dimension) => [dimension, 0]),
+  ) as Record<ExtendedBenchmarkDimension, number>;
 
-      if (catalogModel.apiId) {
-        modelsByNormalizedName.set(normalizeModelName(catalogModel.apiId), model);
-      }
+  for (const benchmark of benchmarks) {
+    const dimension = benchmark.dimension as BenchmarkCategory &
+      ExtendedBenchmarkDimension;
 
-      for (const alias of catalogModel.aliases) {
-        modelsByNormalizedName.set(normalizeModelName(alias), model);
-      }
+    if (!(dimension in scores)) {
+      continue;
+    }
+
+    scores[dimension] = (scores[dimension] ?? 0) + benchmark.score;
+    counts[dimension] += 1;
+  }
+
+  for (const dimension of COMPARE_DIMENSIONS) {
+    if (scores[dimension] !== null) {
+      scores[dimension] = scores[dimension] / counts[dimension];
     }
   }
 
-  return modelsByNormalizedName;
+  return scores;
+}
+
+function normalizeModelName(name: string): string {
+  return name.trim().toLowerCase();
 }

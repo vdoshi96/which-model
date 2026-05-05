@@ -1,5 +1,5 @@
 import type { ComparedModel } from "@/types/api";
-import type { BenchmarkDimension, TaskDimensions } from "@/types/model";
+import type { ExtendedBenchmarkDimension, TaskDimensions } from "@/types/model";
 
 import { Badge } from "./ui/Badge";
 
@@ -8,20 +8,25 @@ interface ComparisonTableProps {
   models: ComparedModel[];
 }
 
-const DIMENSION_LABELS: Record<BenchmarkDimension, string> = {
+const DIMENSION_LABELS: Record<ExtendedBenchmarkDimension, string> = {
   reasoning: "Reasoning",
   coding: "Coding",
   math: "Math",
   instruction_following: "Instruction following",
+  creative_writing: "Creative writing",
   overall: "Overall benchmark",
+  tool_use: "Tool use",
   speed: "Speed",
   cost_efficiency: "Cost efficiency",
+  long_context: "Long context",
 };
 
-const DIMENSION_ORDER = Object.keys(DIMENSION_LABELS) as BenchmarkDimension[];
+const DIMENSION_ORDER = Object.keys(
+  DIMENSION_LABELS,
+) as ExtendedBenchmarkDimension[];
 
-function formatScore(score: number | null) {
-  return score === null ? "N/A" : score.toFixed(1);
+function formatScore(score: number | null | undefined) {
+  return score == null ? "N/A" : score.toFixed(1);
 }
 
 function formatCost(cost: number | null) {
@@ -32,8 +37,8 @@ function formatContext(contextWindow: number | null) {
   return contextWindow === null ? "N/A" : contextWindow.toLocaleString();
 }
 
-function scoreColor(score: number | null) {
-  if (score === null) {
+function scoreColor(score: number | null | undefined) {
+  if (score == null) {
     return "text-secondary";
   }
 
@@ -53,12 +58,28 @@ function relevantDimensions(
   dimensions?: Partial<TaskDimensions>,
 ) {
   return DIMENSION_ORDER.filter((dimension) => {
-    const isTaskRelevant =
-      dimensions?.[dimension] === undefined || dimensions[dimension] > 0;
-    const hasModelData = models.some((model) => model.scores[dimension] !== null);
+    const isTaskRelevant = (dimensions?.[dimension] ?? 0) > 0;
+    const hasModelData = models.some((model) => model.scores[dimension] != null);
 
     return isTaskRelevant || hasModelData;
   });
+}
+
+function uniqueEvidenceGaps(models: ComparedModel[]) {
+  return Array.from(
+    new Set(
+      models.flatMap((model) => [
+        ...(model.unavailableEvidence ?? []).map(
+          (dimension) =>
+            `${DIMENSION_LABELS[dimension as ExtendedBenchmarkDimension] ?? dimension}: catalog has no dedicated rows yet`,
+        ),
+        ...(model.missingEvidence ?? []).map(
+          (dimension) =>
+            `${DIMENSION_LABELS[dimension as ExtendedBenchmarkDimension] ?? dimension}: missing for at least one selected model`,
+        ),
+      ]),
+    ),
+  );
 }
 
 export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
@@ -72,86 +93,104 @@ export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
 
   const winnerScore = Math.max(...models.map((model) => model.weightedScore));
   const rows = relevantDimensions(models, dimensions);
+  const evidenceGaps = uniqueEvidenceGaps(models);
 
   return (
-    <div className="overflow-x-auto border border-border">
-      <table className="w-full min-w-[640px] border-collapse bg-surface text-sm">
-        <thead>
-          <tr>
-            <th className="sticky left-0 z-10 w-40 border-b border-border bg-surface p-3 text-left sm:w-52">
-              Metric
-            </th>
-            {models.map((model) => (
-              <th
-                className="min-w-36 border-b border-border p-3 text-left align-top"
-                key={model.name}
-              >
-                <div className="space-y-1">
-                  <div className="break-words font-mono text-primary">
-                    {model.name}
-                  </div>
-                  <div className="text-xs text-secondary">{model.provider}</div>
-                  {model.weightedScore === winnerScore ? (
-                    <Badge className="border-accent text-accent">Winner</Badge>
-                  ) : null}
-                </div>
+    <div className="border border-border bg-surface">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] border-collapse text-sm">
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-10 w-40 border-b border-border bg-surface p-3 text-left sm:w-52">
+                Metric
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="bg-bg">
-            <td className="sticky left-0 z-10 border-b border-border bg-bg p-3 font-medium">
-              Weighted overall score
-            </td>
-            {models.map((model) => (
-              <td
-                className="border-b border-border p-3 font-mono text-lg font-semibold text-accent"
-                key={model.name}
-              >
-                {model.weightedScore.toFixed(1)}
-              </td>
-            ))}
-          </tr>
-          {rows.map((dimension) => (
-            <tr key={dimension}>
-              <td className="sticky left-0 z-10 border-b border-border bg-surface p-3 text-secondary">
-                {DIMENSION_LABELS[dimension]}
+              {models.map((model) => (
+                <th
+                  className="min-w-36 border-b border-border p-3 text-left align-top"
+                  key={model.name}
+                >
+                  <div className="space-y-1">
+                    <div className="break-words font-mono text-primary">
+                      {model.name}
+                    </div>
+                    <div className="text-xs text-secondary">{model.provider}</div>
+                    {model.weightedScore === winnerScore ? (
+                      <Badge className="border-accent text-accent">Winner</Badge>
+                    ) : null}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="bg-bg">
+              <td className="sticky left-0 z-10 border-b border-border bg-bg p-3 font-medium">
+                Weighted overall score
               </td>
               {models.map((model) => (
                 <td
-                  className={`border-b border-border p-3 font-mono ${scoreColor(
-                    model.scores[dimension],
-                  )}`}
-                  key={`${model.name}-${dimension}`}
+                  className="border-b border-border p-3 font-mono text-lg font-semibold text-accent"
+                  key={model.name}
                 >
-                  {formatScore(model.scores[dimension])}
+                  {model.weightedScore.toFixed(1)}
                 </td>
               ))}
             </tr>
-          ))}
-          <tr>
-            <td className="sticky left-0 z-10 border-b border-border bg-surface p-3 text-secondary">
-              Cost / 1M input
-            </td>
-            {models.map((model) => (
-              <td className="border-b border-border p-3 font-mono" key={model.name}>
-                {formatCost(model.costInputPer1M)}
-              </td>
+            {rows.map((dimension) => (
+              <tr key={dimension}>
+                <td className="sticky left-0 z-10 border-b border-border bg-surface p-3 text-secondary">
+                  {DIMENSION_LABELS[dimension]}
+                </td>
+                {models.map((model) => (
+                  <td
+                    className={`border-b border-border p-3 font-mono ${scoreColor(
+                      model.scores[dimension],
+                    )}`}
+                    key={`${model.name}-${dimension}`}
+                  >
+                    {formatScore(model.scores[dimension])}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </tr>
-          <tr>
-            <td className="sticky left-0 z-10 bg-surface p-3 text-secondary">
-              Context window
-            </td>
-            {models.map((model) => (
-              <td className="p-3 font-mono" key={model.name}>
-                {formatContext(model.contextWindow)}
+            <tr>
+              <td className="sticky left-0 z-10 border-b border-border bg-surface p-3 text-secondary">
+                Cost / 1M input
               </td>
+              {models.map((model) => (
+                <td
+                  className="border-b border-border p-3 font-mono"
+                  key={model.name}
+                >
+                  {formatCost(model.costInputPer1M)}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td className="sticky left-0 z-10 bg-surface p-3 text-secondary">
+                Context window
+              </td>
+              {models.map((model) => (
+                <td className="p-3 font-mono" key={model.name}>
+                  {formatContext(model.contextWindow)}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {evidenceGaps.length > 0 ? (
+        <div className="border-t border-border bg-bg p-3 text-xs text-secondary">
+          <div className="font-mono uppercase">Evidence gaps</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {evidenceGaps.map((gap) => (
+              <span className="border border-border px-2 py-1" key={gap}>
+                {gap}
+              </span>
             ))}
-          </tr>
-        </tbody>
-      </table>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

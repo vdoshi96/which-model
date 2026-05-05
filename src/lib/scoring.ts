@@ -97,14 +97,19 @@ export function buildDimensionScores(
   ) as Record<BenchmarkDimension, number>;
 
   for (const benchmark of benchmarks) {
+    if (!BENCHMARK_DIMENSIONS.includes(benchmark.dimension as BenchmarkDimension)) {
+      continue;
+    }
+
+    const dimension = benchmark.dimension as BenchmarkDimension;
     const benchmarkWeight = getBenchmarkWeight(
       benchmark.source,
-      benchmark.dimension,
+      dimension,
     );
 
-    scores[benchmark.dimension] =
-      (scores[benchmark.dimension] ?? 0) + benchmark.score * benchmarkWeight;
-    weights[benchmark.dimension] += benchmarkWeight;
+    scores[dimension] =
+      (scores[dimension] ?? 0) + benchmark.score * benchmarkWeight;
+    weights[dimension] += benchmarkWeight;
   }
 
   for (const dimension of BENCHMARK_DIMENSIONS) {

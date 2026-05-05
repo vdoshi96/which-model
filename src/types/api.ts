@@ -1,4 +1,9 @@
-import type { BenchmarkDimension, RankedModel, TaskDimensions } from "./model";
+import type {
+  BenchmarkDimension,
+  ExtendedBenchmarkDimension,
+  RankedModel,
+  TaskDimensions,
+} from "./model";
 
 export interface ApiError {
   error: string;
@@ -22,11 +27,16 @@ export interface CompareRequest {
 export interface ComparedModel {
   name: string;
   provider: string;
-  scores: Record<BenchmarkDimension, number | null>;
+  scores: Record<BenchmarkDimension, number | null> &
+    Partial<Record<ExtendedBenchmarkDimension, number | null>>;
   weightedScore: number;
   costInputPer1M: number | null;
   costOutputPer1M?: number | null;
   contextWindow: number | null;
+  evidenceCount?: number;
+  missingEvidence?: string[];
+  unavailableEvidence?: string[];
+  provenanceSummary?: Record<string, number>;
 }
 
 export interface CompareResponse {

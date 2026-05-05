@@ -39,10 +39,11 @@ const comparedModels: ComparedModel[] = [
       cost_efficiency: 24,
     },
     weightedScore: 75.8,
-    costInputPer1M: null,
-    contextWindow: null,
-  },
-];
+      costInputPer1M: null,
+      contextWindow: null,
+      unavailableEvidence: ["creative_writing"],
+    },
+  ];
 const taskDimensions: TaskDimensions = {
   reasoning: 0.9,
   coding: 0.8,
@@ -131,6 +132,10 @@ describe("ComparisonTable", () => {
     expect(screen.getByText("Reasoning")).toBeInTheDocument();
     expect(screen.getByText("Cost / 1M input")).toBeInTheDocument();
     expect(screen.getByText("Context window")).toBeInTheDocument();
+    expect(screen.getByText("Evidence gaps")).toBeInTheDocument();
+    expect(
+      screen.getByText("Creative writing: catalog has no dedicated rows yet"),
+    ).toBeInTheDocument();
   });
 
   it("uses mobile horizontal scrolling and score color classes", () => {

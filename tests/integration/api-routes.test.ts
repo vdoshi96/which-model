@@ -106,16 +106,20 @@ describe("recommend and compare API routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      taskSummary: "Reasoning is the main requirement.",
-      recommendations: [
-        {
-          rank: 1,
-          model: { name: "Model A" },
-          score: 0.9,
-        },
-      ],
-    });
+    const body = await response.json();
+
+    expect(body.taskSummary).toBe("Reasoning is the main requirement.");
+    expect(body.recommendations[0]).toEqual(
+      expect.objectContaining({
+        rank: 1,
+        model: expect.objectContaining({ name: "GPT-5.5" }),
+        evidenceCount: expect.any(Number),
+        contributions: expect.arrayContaining([
+          expect.objectContaining({ label: "reasoning" }),
+        ]),
+        rationale: expect.any(String),
+      }),
+    );
     expect(mockLimit).toHaveBeenCalledWith("user:user_1:ip:203.0.113.10");
     expect(mockQueryCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -140,50 +144,6 @@ describe("recommend and compare API routes", () => {
       },
       summary: "A coding task where implementation quality matters.",
     });
-    mockModelFindMany.mockResolvedValue([
-      {
-        name: "Premium Quality",
-        provider: "Provider",
-        contextWindow: 128000,
-        costInputPer1M: 10,
-        costOutputPer1M: 30,
-        scores: [
-          {
-            source: "catalog_prior",
-            dimension: "coding",
-            score: 90,
-            rawLabel: "Coding prior",
-          },
-          {
-            source: "catalog_prior",
-            dimension: "cost_efficiency",
-            score: 0,
-            rawLabel: "Cost prior",
-          },
-        ],
-      },
-      {
-        name: "Cheap Enough",
-        provider: "Provider",
-        contextWindow: 128000,
-        costInputPer1M: 0.1,
-        costOutputPer1M: 0.5,
-        scores: [
-          {
-            source: "catalog_prior",
-            dimension: "coding",
-            score: 50,
-            rawLabel: "Coding prior",
-          },
-          {
-            source: "catalog_prior",
-            dimension: "cost_efficiency",
-            score: 100,
-            rawLabel: "Cost prior",
-          },
-        ],
-      },
-    ]);
     const { POST } = await import("@/app/api/recommend/route");
 
     const response = await POST(
@@ -199,7 +159,11 @@ describe("recommend and compare API routes", () => {
 
     expect(response.status).toBe(200);
     expect(body.dimensions.cost_efficiency).toBeGreaterThanOrEqual(0.75);
-    expect(body.recommendations[0].model.name).toBe("Cheap Enough");
+    expect(body.recommendations[0].contributions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "cost_efficiency" }),
+      ]),
+    );
   });
 
   it("applies long-context preferences before ranking", async () => {
@@ -216,38 +180,6 @@ describe("recommend and compare API routes", () => {
       },
       summary: "A coding task with long files.",
     });
-    mockModelFindMany.mockResolvedValue([
-      {
-        name: "GPT-5.5",
-        provider: "OpenAI",
-        contextWindow: 1000000,
-        costInputPer1M: 5,
-        costOutputPer1M: 30,
-        scores: [
-          {
-            source: "catalog_prior",
-            dimension: "coding",
-            score: 70,
-            rawLabel: "Coding prior",
-          },
-        ],
-      },
-      {
-        name: "Claude Opus 4.5",
-        provider: "Anthropic",
-        contextWindow: 200000,
-        costInputPer1M: 5,
-        costOutputPer1M: 25,
-        scores: [
-          {
-            source: "catalog_prior",
-            dimension: "coding",
-            score: 99,
-            rawLabel: "Coding prior",
-          },
-        ],
-      },
-    ]);
     const { POST } = await import("@/app/api/recommend/route");
 
     const response = await POST(
@@ -263,8 +195,12 @@ describe("recommend and compare API routes", () => {
 
     expect(response.status).toBe(200);
     expect(body.dimensions.long_context).toBe(1);
-    expect(body.recommendations).toHaveLength(1);
-    expect(body.recommendations[0].model.name).toBe("GPT-5.5");
+    expect(
+      body.recommendations.every(
+        (entry: { model: { contextWindow: number | null } }) =>
+          (entry.model.contextWindow ?? 0) >= 1_000_000,
+      ),
+    ).toBe(true);
   });
 
   it("does not return hosted models when local-only is selected", async () => {
@@ -329,53 +265,6 @@ describe("recommend and compare API routes", () => {
       },
       summary: "A coding task.",
     });
-    mockModelFindMany.mockResolvedValue([
-      {
-        name: "GPT-4.1",
-        provider: "OpenAI",
-        contextWindow: 1000000,
-        costInputPer1M: 2,
-        costOutputPer1M: 8,
-        scores: [
-          {
-            source: "catalog_prior",
-            dimension: "coding",
-            score: 100,
-            rawLabel: "Coding prior",
-          },
-        ],
-      },
-      {
-        name: "GPT-5.5",
-        provider: "OpenAI",
-        contextWindow: 1000000,
-        costInputPer1M: 5,
-        costOutputPer1M: 30,
-        scores: [
-          {
-            source: "catalog_prior",
-            dimension: "coding",
-            score: 70,
-            rawLabel: "Coding prior",
-          },
-        ],
-      },
-      {
-        name: "Claude Opus 4.7",
-        provider: "Anthropic",
-        contextWindow: 1000000,
-        costInputPer1M: 5,
-        costOutputPer1M: 25,
-        scores: [
-          {
-            source: "catalog_prior",
-            dimension: "coding",
-            score: 80,
-            rawLabel: "Coding prior",
-          },
-        ],
-      },
-    ]);
     const { POST } = await import("@/app/api/recommend/route");
 
     const response = await POST(
@@ -388,12 +277,14 @@ describe("recommend and compare API routes", () => {
       }),
     );
     const body = await response.json();
+    const recommendationNames = body.recommendations.map(
+      (entry: { model: { name: string } }) => entry.model.name,
+    );
 
     expect(response.status).toBe(200);
-    expect(body.recommendations.map((entry: { model: { name: string } }) => entry.model.name)).toEqual([
-      "Claude Opus 4.7",
-      "GPT-5.5",
-    ]);
+    expect(recommendationNames).toContain("GPT-5.5");
+    expect(recommendationNames).toContain("Claude Opus 4.7");
+    expect(recommendationNames).not.toContain("GPT-4.1");
   });
 
   it("returns catalog and benchmark-backed models from the model catalog API", async () => {
@@ -479,7 +370,7 @@ describe("recommend and compare API routes", () => {
     expect(mockInterpretTask).toHaveBeenCalled();
   });
 
-  it("does not recommend models that have no usable benchmark scores", async () => {
+  it("does not use live DB rows as the recommendation authority", async () => {
     mockModelFindMany.mockResolvedValue([
       {
         name: "Catalog Only",
@@ -515,16 +406,17 @@ describe("recommend and compare API routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      recommendations: [
-        expect.objectContaining({
-          model: expect.objectContaining({ name: "Benchmarked Model" }),
-        }),
-      ],
-    });
+    const body = await response.json();
+
+    expect(
+      body.recommendations.some(
+        (entry: { model: { name: string } }) =>
+          entry.model.name === "Benchmarked Model",
+      ),
+    ).toBe(false);
   });
 
-  it("filters stale binary LiveBench artifacts from recommendations", async () => {
+  it("returns catalog evidence instead of live benchmark artifacts", async () => {
     mockInterpretTask.mockResolvedValue({
       refused: false,
       dimensions: {
@@ -538,44 +430,6 @@ describe("recommend and compare API routes", () => {
       },
       summary: "This task needs both reasoning and coding.",
     });
-    mockModelFindMany.mockResolvedValue([
-      {
-        name: "Narrow Artifact",
-        provider: "Provider",
-        contextWindow: 128000,
-        costInputPer1M: 1,
-        costOutputPer1M: 2,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "coding",
-            score: 100,
-            rawLabel: "LiveBench coding",
-          },
-        ],
-      },
-      {
-        name: "Balanced Model",
-        provider: "Provider",
-        contextWindow: 128000,
-        costInputPer1M: 1,
-        costOutputPer1M: 2,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "coding",
-            score: 80,
-            rawLabel: "Coding",
-          },
-          {
-            source: "hf_leaderboard",
-            dimension: "reasoning",
-            score: 80,
-            rawLabel: "MMLU-Pro",
-          },
-        ],
-      },
-    ]);
     const { POST } = await import("@/app/api/recommend/route");
 
     const response = await POST(
@@ -586,14 +440,16 @@ describe("recommend and compare API routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      recommendations: [
+    const body = await response.json();
+
+    expect(body.recommendations[0].benchmarksUsed).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
-          model: expect.objectContaining({ name: "Balanced Model" }),
-          score: 80,
+          source: "catalog-coding-prior",
+          provenance: "editorial_prior",
         }),
-      ],
-    });
+      ]),
+    );
   });
 
   it("uses curated frontier priors and metadata for broad creative recommendations", async () => {
@@ -656,13 +512,14 @@ describe("recommend and compare API routes", () => {
         costInputPer1M: expect.any(Number),
         costOutputPer1M: expect.any(Number),
       }),
+      evidenceCount: expect.any(Number),
       benchmarksUsed: expect.arrayContaining([
-        expect.objectContaining({ source: "catalog_prior" }),
+        expect.objectContaining({ source: "catalog-overall-prior" }),
       ]),
     });
   });
 
-  it("uses live DB metadata before catalog metadata in recommendations", async () => {
+  it("uses catalog metadata in recommendations", async () => {
     mockModelFindMany.mockResolvedValue([
       {
         name: "gemini-2.5-flash",
@@ -690,19 +547,19 @@ describe("recommend and compare API routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      recommendations: [
-        expect.objectContaining({
-          model: expect.objectContaining({
-            name: "Gemini 2.5 Flash",
-            provider: "Google Live",
-            contextWindow: 999999,
-            costInputPer1M: 9,
-            costOutputPer1M: 10,
-          }),
+    const body = await response.json();
+
+    expect(body.recommendations[0]).toEqual(
+      expect.objectContaining({
+        model: expect.objectContaining({
+          name: "GPT-5.5",
+          provider: "OpenAI",
+          contextWindow: 1_000_000,
+          costInputPer1M: 5,
+          costOutputPer1M: 30,
         }),
-      ],
-    });
+      }),
+    );
   });
 
   it("returns HTTP 400 when DeepSeek refuses the task", async () => {
@@ -762,39 +619,7 @@ describe("recommend and compare API routes", () => {
     });
   });
 
-  it("returns compared models with null missing dimension scores", async () => {
-    mockModelFindMany.mockResolvedValue([
-      {
-        name: "Model A",
-        provider: "Provider",
-        contextWindow: 128000,
-        costInputPer1M: 1,
-        costOutputPer1M: 2,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "reasoning",
-            score: 0.9,
-            rawLabel: null,
-          },
-        ],
-      },
-      {
-        name: "Model B",
-        provider: "Provider",
-        contextWindow: 32000,
-        costInputPer1M: 0.5,
-        costOutputPer1M: 1,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "reasoning",
-            score: 0.7,
-            rawLabel: null,
-          },
-        ],
-      },
-    ]);
+  it("returns compared catalog models with null missing category scores", async () => {
     const { POST } = await import("@/app/api/compare/route");
 
     const response = await POST(
@@ -802,33 +627,36 @@ describe("recommend and compare API routes", () => {
         method: "POST",
         body: JSON.stringify({
           task: "Pick a reasoning model.",
-          modelNames: ["Model A", "Model B"],
+          modelNames: ["GPT-5.5", "Claude Opus 4.7"],
         }),
       }),
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      models: [
-        {
-          name: "Model A",
-          scores: {
-            reasoning: 0.9,
-            coding: null,
-          },
-          weightedScore: 0.9,
-        },
-        {
-          name: "Model B",
-          weightedScore: 0.7,
-        },
-      ],
-    });
-    expect(mockModelFindMany).toHaveBeenCalledWith(
+    const body = await response.json();
+
+    expect(body.models[0]).toEqual(
       expect.objectContaining({
-        where: { name: { in: ["Model A", "Model B"] } },
+        name: "GPT-5.5",
+        scores: expect.objectContaining({
+          reasoning: expect.any(Number),
+          creative_writing: null,
+        }),
+        weightedScore: expect.any(Number),
+        evidenceCount: expect.any(Number),
+        provenanceSummary: expect.objectContaining({
+          editorial_prior: expect.any(Number),
+        }),
+        rationale: expect.stringContaining("editorial prior"),
       }),
     );
+    expect(body.models[1]).toEqual(
+      expect.objectContaining({
+        name: "Claude Opus 4.7",
+        weightedScore: expect.any(Number),
+      }),
+    );
+    expect(mockModelFindMany).not.toHaveBeenCalled();
     expect(mockLimit).toHaveBeenCalledWith("user:user_1:ip:203.0.113.10");
     expect(mockQueryCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -839,24 +667,7 @@ describe("recommend and compare API routes", () => {
     });
   });
 
-  it("compares catalog-only models with metadata and missing benchmark scores", async () => {
-    mockModelFindMany.mockResolvedValue([
-      {
-        name: "Model A",
-        provider: "Provider",
-        contextWindow: 128000,
-        costInputPer1M: 1,
-        costOutputPer1M: 2,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "reasoning",
-            score: 0.9,
-            rawLabel: null,
-          },
-        ],
-      },
-    ]);
+  it("compares catalog models with metadata and evidence", async () => {
     const { POST } = await import("@/app/api/compare/route");
 
     const response = await POST(
@@ -864,7 +675,7 @@ describe("recommend and compare API routes", () => {
         method: "POST",
         body: JSON.stringify({
           task: "Pick a reasoning model.",
-          modelNames: ["Model A", "Claude Sonnet 4.6"],
+          modelNames: ["GPT-5.5", "Claude Sonnet 4.6"],
         }),
       }),
     );
@@ -873,18 +684,19 @@ describe("recommend and compare API routes", () => {
     expect(await response.json()).toMatchObject({
       models: [
         expect.objectContaining({
-          name: "Model A",
-          weightedScore: 0.9,
+          name: "GPT-5.5",
+          weightedScore: expect.any(Number),
         }),
         expect.objectContaining({
           name: "Claude Sonnet 4.6",
           provider: "Anthropic",
           contextWindow: 1_000_000,
           costInputPer1M: 3,
-          weightedScore: 0,
+          weightedScore: expect.any(Number),
+          evidenceCount: 7,
           scores: expect.objectContaining({
-            reasoning: null,
-            coding: null,
+            reasoning: expect.any(Number),
+            creative_writing: null,
           }),
         }),
       ],
@@ -944,39 +756,7 @@ describe("recommend and compare API routes", () => {
     expect(body.models[1].weightedScore).toBeGreaterThan(80);
   });
 
-  it("uses alias-backed DB benchmark scores when comparing a catalog display name", async () => {
-    mockModelFindMany.mockResolvedValue([
-      {
-        name: "claude-sonnet-4-6",
-        provider: "Anthropic",
-        contextWindow: 1000000,
-        costInputPer1M: 3,
-        costOutputPer1M: 15,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "reasoning",
-            score: 0.95,
-            rawLabel: null,
-          },
-        ],
-      },
-      {
-        name: "Model B",
-        provider: "Provider",
-        contextWindow: 32000,
-        costInputPer1M: 0.5,
-        costOutputPer1M: 1,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "reasoning",
-            score: 0.7,
-            rawLabel: null,
-          },
-        ],
-      },
-    ]);
+  it("uses catalog aliases when comparing a catalog display name", async () => {
     const { POST } = await import("@/app/api/compare/route");
 
     const response = await POST(
@@ -984,7 +764,7 @@ describe("recommend and compare API routes", () => {
         method: "POST",
         body: JSON.stringify({
           task: "Pick a reasoning model.",
-          modelNames: ["Claude Sonnet 4.6", "Model B"],
+          modelNames: ["claude-sonnet-4-6", "GPT-5.5"],
         }),
       }),
     );
@@ -998,50 +778,18 @@ describe("recommend and compare API routes", () => {
           contextWindow: 1000000,
           costInputPer1M: 3,
           costOutputPer1M: 15,
-          scores: expect.objectContaining({ reasoning: 0.95 }),
-          weightedScore: 0.95,
+          scores: expect.objectContaining({ reasoning: expect.any(Number) }),
+          weightedScore: expect.any(Number),
         }),
         expect.objectContaining({
-          name: "Model B",
-          weightedScore: 0.7,
+          name: "GPT-5.5",
+          weightedScore: expect.any(Number),
         }),
       ],
     });
   });
 
-  it("uses live DB metadata before catalog metadata in comparisons", async () => {
-    mockModelFindMany.mockResolvedValue([
-      {
-        name: "gemini-2.5-flash",
-        provider: "Google Live",
-        contextWindow: 999999,
-        costInputPer1M: 9,
-        costOutputPer1M: 10,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "reasoning",
-            score: 0.9,
-            rawLabel: null,
-          },
-        ],
-      },
-      {
-        name: "Model B",
-        provider: "Provider",
-        contextWindow: 32000,
-        costInputPer1M: 0.5,
-        costOutputPer1M: 1,
-        scores: [
-          {
-            source: "livebench",
-            dimension: "reasoning",
-            score: 0.7,
-            rawLabel: null,
-          },
-        ],
-      },
-    ]);
+  it("uses catalog metadata in comparisons", async () => {
     const { POST } = await import("@/app/api/compare/route");
 
     const response = await POST(
@@ -1049,7 +797,7 @@ describe("recommend and compare API routes", () => {
         method: "POST",
         body: JSON.stringify({
           task: "Pick a reasoning model.",
-          modelNames: ["Gemini 2.5 Flash", "Model B"],
+          modelNames: ["Gemini 3.1 Pro Preview", "GPT-5.5"],
         }),
       }),
     );
@@ -1058,22 +806,22 @@ describe("recommend and compare API routes", () => {
     expect(await response.json()).toMatchObject({
       models: [
         expect.objectContaining({
-          name: "Gemini 2.5 Flash",
-          provider: "Google Live",
-          contextWindow: 999999,
-          costInputPer1M: 9,
-          costOutputPer1M: 10,
-          weightedScore: 0.9,
+          name: "Gemini 3.1 Pro Preview",
+          provider: "Google",
+          contextWindow: 1_048_576,
+          costInputPer1M: 2,
+          costOutputPer1M: 12,
+          weightedScore: expect.any(Number),
         }),
         expect.objectContaining({
-          name: "Model B",
-          weightedScore: 0.7,
+          name: "GPT-5.5",
+          weightedScore: expect.any(Number),
         }),
       ],
     });
   });
 
-  it("rejects comparison when a requested model is neither benchmarked nor cataloged", async () => {
+  it("rejects comparison when a requested model is not in the curated catalog", async () => {
     const { POST } = await import("@/app/api/compare/route");
 
     const response = await POST(
@@ -1081,7 +829,7 @@ describe("recommend and compare API routes", () => {
         method: "POST",
         body: JSON.stringify({
           task: "Pick a reasoning model.",
-          modelNames: ["Model A", "Missing Model XYZ"],
+          modelNames: ["Model A", "GPT-5.5"],
         }),
       }),
     );

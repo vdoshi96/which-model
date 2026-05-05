@@ -10,23 +10,28 @@ import {
   serializeRecommendationCache,
 } from "@/lib/recommendationCache";
 import type { ApiError, RecommendResponse } from "@/types/api";
-import type { BenchmarkDimension, TaskDimensions } from "@/types/model";
+import type { ExtendedBenchmarkDimension, TaskDimensions } from "@/types/model";
 
 const RECOMMENDATION_STORAGE_KEY = "which-model:last-recommendation";
 const COMPARE_TASK_STORAGE_KEY = "which-model:compare-task";
 const COMPARE_RECOMMENDATIONS_STORAGE_KEY = "which-model:compare-recommendations";
 
-const DIMENSION_LABELS: Record<BenchmarkDimension, string> = {
+const DIMENSION_LABELS: Record<ExtendedBenchmarkDimension, string> = {
   reasoning: "Reasoning",
   coding: "Coding",
   math: "Math",
   instruction_following: "Instruction following",
+  creative_writing: "Creative writing",
   overall: "Overall",
+  tool_use: "Tool use",
   speed: "Speed",
   cost_efficiency: "Cost efficiency",
+  long_context: "Long context",
 };
 
-const DIMENSION_ORDER = Object.keys(DIMENSION_LABELS) as BenchmarkDimension[];
+const DIMENSION_ORDER = Object.keys(
+  DIMENSION_LABELS,
+) as ExtendedBenchmarkDimension[];
 
 function getErrorMessage(payload: unknown, fallback: string) {
   if (
@@ -69,7 +74,7 @@ function DimensionWeights({ dimensions }: { dimensions: TaskDimensions }) {
       </h2>
       <div className="space-y-3">
         {DIMENSION_ORDER.map((dimension) => {
-          const weight = dimensions[dimension];
+          const weight = dimensions[dimension] ?? 0;
           const width = `${Math.max((weight / maxWeight) * 100, 2)}%`;
 
           return (

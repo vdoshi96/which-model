@@ -7,6 +7,12 @@ export type BenchmarkDimension =
   | "speed"
   | "cost_efficiency";
 
+export type ExtendedBenchmarkDimension =
+  | BenchmarkDimension
+  | "creative_writing"
+  | "tool_use"
+  | "long_context";
+
 export type BenchmarkSource =
   | "catalog_prior"
   | "aider_polyglot"
@@ -17,13 +23,16 @@ export type BenchmarkSource =
   | "livebench"
   | "swe_bench";
 
-export type TaskDimensions = Record<BenchmarkDimension, number>;
+export type TaskDimensions = Record<BenchmarkDimension, number> &
+  Partial<Record<Exclude<ExtendedBenchmarkDimension, BenchmarkDimension>, number>>;
 
 export interface BenchmarkScore {
   source: BenchmarkSource | string;
-  dimension: BenchmarkDimension;
+  dimension: ExtendedBenchmarkDimension;
   score: number;
   rawLabel?: string | null;
+  provenance?: string;
+  sourceUrl?: string;
 }
 
 export interface ModelSummary {
@@ -39,4 +48,17 @@ export interface RankedModel {
   model: ModelSummary;
   score: number;
   benchmarksUsed: BenchmarkScore[];
+  evidenceCount?: number;
+  missingEvidence?: string[];
+  unavailableEvidence?: string[];
+  provenanceSummary?: Record<string, number>;
+  contributions?: RankingContribution[];
+  rationale?: string;
+}
+
+export interface RankingContribution {
+  label: ExtendedBenchmarkDimension;
+  value: number;
+  weight: number;
+  contribution: number;
 }
