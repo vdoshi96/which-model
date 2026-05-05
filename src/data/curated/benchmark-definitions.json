@@ -1,0 +1,90 @@
+[
+  {
+    "id": "catalog-overall-prior",
+    "label": "Curated Overall Prior",
+    "category": "overall",
+    "scale": "0_100",
+    "higherIsBetter": true,
+    "description": "Conservative seed prior for general assistant quality until benchmark-specific refresh data is curated.",
+    "limitations": "Not a direct benchmark measurement; used only as a source-labeled seed prior.",
+    "sourceUrl": "https://artificialanalysis.ai/leaderboards/models",
+    "lastVerified": "2026-05-04"
+  },
+  {
+    "id": "catalog-reasoning-prior",
+    "label": "Curated Reasoning Prior",
+    "category": "reasoning",
+    "scale": "0_100",
+    "higherIsBetter": true,
+    "description": "Conservative seed prior for reasoning-heavy work based on catalog priors and public leaderboard orientation.",
+    "limitations": "Not a direct benchmark measurement; refresh tasks should replace with exact benchmark rows where available.",
+    "sourceUrl": "https://raw.githubusercontent.com/LiveBench/LiveBench/main/livebench/data/results.json",
+    "lastVerified": "2026-05-04"
+  },
+  {
+    "id": "catalog-coding-prior",
+    "label": "Curated Coding Prior",
+    "category": "coding",
+    "scale": "0_100",
+    "higherIsBetter": true,
+    "description": "Conservative seed prior for coding tasks.",
+    "limitations": "Not a direct benchmark measurement; intended as initial catalog coverage.",
+    "sourceUrl": "https://aider.chat/docs/leaderboards/",
+    "lastVerified": "2026-05-04"
+  },
+  {
+    "id": "catalog-instruction-prior",
+    "label": "Curated Instruction Following Prior",
+    "category": "instruction_following",
+    "scale": "0_100",
+    "higherIsBetter": true,
+    "description": "Conservative seed prior for instruction adherence and controllability.",
+    "limitations": "Not a direct benchmark measurement; exact eval sources should be added during refresh.",
+    "sourceUrl": "https://huggingface.co/spaces/lmarena-ai/arena-leaderboard/raw/main/arena_hard_auto_leaderboard_v0.1.csv",
+    "lastVerified": "2026-05-04"
+  },
+  {
+    "id": "catalog-speed-prior",
+    "label": "Curated Speed Prior",
+    "category": "speed",
+    "scale": "0_100",
+    "higherIsBetter": true,
+    "description": "Conservative seed prior for perceived response speed.",
+    "limitations": "Not a direct latency measurement; provider routing and load can change results.",
+    "sourceUrl": "https://artificialanalysis.ai/models",
+    "lastVerified": "2026-05-04"
+  },
+  {
+    "id": "catalog-cost-efficiency-prior",
+    "label": "Curated Cost Efficiency Prior",
+    "category": "cost_efficiency",
+    "scale": "0_100",
+    "higherIsBetter": true,
+    "description": "Seed score derived from source-backed token prices in the model catalog.",
+    "limitations": "Excludes prompt caching, batches, region-specific discounts, tools, and provider promotions.",
+    "sourceUrl": "https://openai.com/api/pricing/",
+    "lastVerified": "2026-05-04"
+  },
+  {
+    "id": "catalog-long-context-prior",
+    "label": "Curated Long Context Prior",
+    "category": "long_context",
+    "scale": "0_100",
+    "higherIsBetter": true,
+    "description": "Seed score derived from source-backed context windows in the model catalog.",
+    "limitations": "Effective quality at maximum context is not guaranteed by nominal context length.",
+    "sourceUrl": "https://developers.openai.com/api/docs/models",
+    "lastVerified": "2026-05-04"
+  },
+  {
+    "id": "catalog-tool-use-prior",
+    "label": "Curated Tool Use Prior",
+    "category": "tool_use",
+    "scale": "0_100",
+    "higherIsBetter": true,
+    "description": "Conservative seed prior for tool calling and agent workflows.",
+    "limitations": "Not a direct BFCL measurement for every model row.",
+    "sourceUrl": "https://gorilla.cs.berkeley.edu/data_overall.csv",
+    "lastVerified": "2026-05-04"
+  }
+]
