@@ -1,24 +1,26 @@
-import { getPrisma } from "@/lib/db";
-import { mergeCatalogWithDbModels } from "@/lib/modelCatalog";
+import { loadCuratedCatalog } from "@/lib/curatedCatalog/loadCatalog";
 
 export const runtime = "nodejs";
 
-type ModelCatalogRecord = {
-  name: string;
-  provider: string;
-  contextWindow: number | null;
-  costInputPer1M: number | null;
-  costOutputPer1M: number | null;
-  scores?: unknown[];
-};
-
 export async function GET() {
-  const prisma = getPrisma();
-  const dbModels = (await prisma.model.findMany({
-    include: { scores: { select: { id: true } } },
-  })) as ModelCatalogRecord[];
+  const catalog = loadCuratedCatalog();
+  const scoreModelIds = new Set(catalog.scores.map((score) => score.modelId));
 
   return Response.json({
-    models: mergeCatalogWithDbModels(dbModels),
+    models: catalog.models
+      .map((model) => ({
+        name: model.name,
+        provider: model.provider,
+        contextWindow: model.contextWindow,
+        costInputPer1M: model.costInputPer1M,
+        costOutputPer1M: model.costOutputPer1M,
+        hasBenchmarks: scoreModelIds.has(model.id),
+        status: model.status,
+      }))
+      .sort(
+        (left, right) =>
+          left.provider.localeCompare(right.provider) ||
+          left.name.localeCompare(right.name),
+      ),
   });
 }

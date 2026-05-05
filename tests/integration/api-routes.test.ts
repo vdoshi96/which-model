@@ -287,7 +287,7 @@ describe("recommend and compare API routes", () => {
     expect(recommendationNames).not.toContain("GPT-4.1");
   });
 
-  it("returns catalog and benchmark-backed models from the model catalog API", async () => {
+  it("returns curated catalog models from the model catalog API", async () => {
     mockModelFindMany.mockResolvedValue([
       {
         name: "Benchmark Only Model",
@@ -323,7 +323,8 @@ describe("recommend and compare API routes", () => {
     expect(body).toMatchObject({
       models: expect.arrayContaining([
         expect.objectContaining({
-          name: "Benchmark Only Model",
+          name: "GPT-5.5",
+          provider: "OpenAI",
           hasBenchmarks: true,
         }),
         expect.objectContaining({
@@ -332,10 +333,15 @@ describe("recommend and compare API routes", () => {
           contextWindow: 1_000_000,
           costInputPer1M: 3,
           costOutputPer1M: 15,
-          hasBenchmarks: false,
+          hasBenchmarks: true,
         }),
       ]),
     });
+    expect(
+      body.models.some(
+        (model: { name: string }) => model.name === "Benchmark Only Model",
+      ),
+    ).toBe(false);
     expect(
       body.models.some(
         (model: { name: string }) => model.name === "Old Unbenchmarked Artifact",
@@ -346,6 +352,7 @@ describe("recommend and compare API routes", () => {
         model.name.startsWith("https://huggingface.co/"),
       ),
     ).toBe(false);
+    expect(mockModelFindMany).not.toHaveBeenCalled();
   });
 
   it("lets the admin request recommendations without consuming rate limit quota", async () => {
