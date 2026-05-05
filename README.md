@@ -1,6 +1,6 @@
 # which-model
 
-`which-model` helps users find the best LLM for a specific task. It combines public benchmark data, server-side DeepSeek task interpretation, and weighted model scoring to return ranked recommendations and side-by-side comparisons.
+`which-model` helps users find the best LLM for a specific task. It combines a source-backed curated JSON catalog, server-side DeepSeek task interpretation, and deterministic weighted scoring to return ranked recommendations and side-by-side comparisons.
 
 ## Tech Stack
 
@@ -11,7 +11,7 @@
 - Prisma with Neon Postgres
 - Upstash Redis rate limiting
 - DeepSeek through the OpenAI SDK
-- Vercel Cron
+- Manual curated catalog refreshes
 
 ## Local Setup
 
@@ -61,6 +61,12 @@ UPSTASH_REDIS_REST_TOKEN=
 CRON_SECRET=
 ```
 
+## Recommendation Data
+
+Recommendations use versioned curated JSON files in `src/data/curated/` for model metadata, benchmark definitions, and scoring evidence. DeepSeek interprets the user's task, then the app applies deterministic ranking against the curated catalog so recommendation changes are reviewable and reproducible.
+
+Refreshes are manual editorial events. Use `docs/model-catalog/2026-05-04-manual-refresh-runbook.md` to verify official provider pages, benchmark pages, JSON edits, validation commands, and Browser Use UI checks before opening a refresh PR.
+
 ## Deployment
 
-Deploy on Vercel after linking the GitHub repository. Add the environment variables above in Vercel Project Settings. `vercel.json` configures the nightly benchmark refresh cron.
+Deploy on Vercel after linking the GitHub repository. Add the environment variables above in Vercel Project Settings. Recommendation ranking is not refreshed by a nightly live benchmark job; update the curated JSON catalog through the manual refresh runbook when provider or benchmark facts change.

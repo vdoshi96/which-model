@@ -1,10 +1,13 @@
 import { z } from "zod";
 
-import { refreshBenchmarkData } from "@/lib/benchmarkSources";
-
 export const runtime = "nodejs";
 
 const authHeaderSchema = z.string().startsWith("Bearer ");
+const DISABLED_REFRESH_RESPONSE = {
+  ok: false,
+  error:
+    "Automatic benchmark refresh is disabled. Use the manual curated catalog refresh runbook.",
+};
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -18,12 +21,7 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const result = await refreshBenchmarkData();
-
-  return Response.json({
-    ok: true,
-    ...result,
-  });
+  return Response.json(DISABLED_REFRESH_RESPONSE, { status: 410 });
 }
 
 export const POST = GET;

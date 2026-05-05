@@ -42,7 +42,7 @@ describe("refresh benchmarks cron route", () => {
     expect(response.status).toBe(401);
   });
 
-  it("runs the refresh when the bearer token matches CRON_SECRET", async () => {
+  it("returns 410 and does not update ranking data when authorized", async () => {
     process.env.CRON_SECRET = "test-secret";
     const { GET } = await import("@/app/api/cron/refresh-benchmarks/route");
 
@@ -52,13 +52,12 @@ describe("refresh benchmarks cron route", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(410);
     expect(await response.json()).toEqual({
-      ok: true,
-      modelsProcessed: 24,
-      scoresProcessed: 96,
-      errors: [],
+      ok: false,
+      error:
+        "Automatic benchmark refresh is disabled. Use the manual curated catalog refresh runbook.",
     });
-    expect(mockRefreshBenchmarkData).toHaveBeenCalledTimes(1);
+    expect(mockRefreshBenchmarkData).not.toHaveBeenCalled();
   });
 });
