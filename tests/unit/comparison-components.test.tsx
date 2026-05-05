@@ -102,6 +102,23 @@ describe("ModelSelector", () => {
     expect(screen.getByText("Gemini 1.5 Pro")).toBeInTheDocument();
     expect(screen.queryByText("Claude 3.5 Sonnet")).not.toBeInTheDocument();
   });
+
+  it("keeps selected models in a compact strip and bounds the option list", () => {
+    const { container } = render(
+      <ModelSelector
+        models={["Claude 3.5 Sonnet", "GPT-4o", "Gemini 1.5 Pro"]}
+        onChange={() => undefined}
+        selectedModels={["Claude 3.5 Sonnet", "GPT-4o"]}
+      />,
+    );
+
+    expect(screen.getByTestId("selected-models-strip")).toHaveTextContent(
+      "Claude 3.5 Sonnet",
+    );
+    expect(screen.getByTestId("selected-models-strip")).toHaveTextContent("GPT-4o");
+    expect(screen.getByTestId("model-options-list")).toHaveClass("max-h-80");
+    expect(container.querySelectorAll("label")).toHaveLength(4);
+  });
 });
 
 describe("ComparisonTable", () => {

@@ -8,10 +8,14 @@ export type BenchmarkDimension =
   | "cost_efficiency";
 
 export type BenchmarkSource =
+  | "catalog_prior"
+  | "aider_polyglot"
   | "artificial_analysis"
+  | "bfcl"
   | "lmsys_arena"
   | "hf_leaderboard"
-  | "livebench";
+  | "livebench"
+  | "swe_bench";
 
 export type TaskDimensions = Record<BenchmarkDimension, number>;
 

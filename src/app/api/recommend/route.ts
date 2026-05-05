@@ -1,14 +1,25 @@
 import { auth } from "@/lib/auth";
+import {
+  buildCatalogPriorScores,
+  shouldUseCatalogPriors,
+} from "@/lib/catalogPriors";
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
-import { findCatalogModel } from "@/lib/modelCatalog";
+import {
+  findCatalogModel,
+  isDisplayableModelName,
+  listCatalogModels,
+} from "@/lib/modelCatalog";
 import {
   assertRateLimit,
   buildRateLimitKey,
   getClientIp,
   RateLimitError,
 } from "@/lib/rateLimit";
-import { BENCHMARK_DIMENSIONS, rankModels } from "@/lib/scoring";
+import {
+  isUsableBenchmarkScore,
+  rankModels,
+} from "@/lib/scoring";
 import { recommendRequestSchema } from "@/lib/validators/recommend";
 import type { BenchmarkDimension, BenchmarkScore } from "@/types/model";
 
@@ -58,7 +69,7 @@ function toBenchmarkScores(
 ): BenchmarkScore[] {
   return scores
     .filter((score) =>
-      BENCHMARK_DIMENSIONS.includes(score.dimension as BenchmarkDimension),
+      isUsableBenchmarkScore(score),
     )
     .map((score) => ({
       source: score.source,
@@ -113,24 +124,73 @@ export async function POST(request: Request) {
   const models = (await prisma.model.findMany({
     include: { scores: true },
   })) as RecommendedModelRecord[];
-  const recommendations = rankModels(
-    models
-      .map((model) => {
-        const catalogModel = findCatalogModel(model.name);
-        const benchmarks = toBenchmarkScores(model.scores);
+  const useCatalogPriors = shouldUseCatalogPriors(interpretation.dimensions);
+  const recommendationCandidates = new Map<string, {
+    name: string;
+    provider: string;
+    contextWindow: number | null;
+    costInputPer1M: number | null;
+    costOutputPer1M: number | null;
+    benchmarks: BenchmarkScore[];
+  }>();
 
-        return {
-          name: catalogModel?.name ?? model.name,
-          provider: model.provider || catalogModel?.provider || "Unknown",
-          contextWindow: model.contextWindow ?? catalogModel?.contextWindow ?? null,
-          costInputPer1M:
-            model.costInputPer1M ?? catalogModel?.costInputPer1M ?? null,
-          costOutputPer1M:
-            model.costOutputPer1M ?? catalogModel?.costOutputPer1M ?? null,
-          benchmarks,
-        };
-      })
-      .filter((model) => model.benchmarks.length > 0),
+  for (const model of models) {
+    const catalogModel = findCatalogModel(model.name);
+
+    if (!catalogModel && !isDisplayableModelName(model.name)) {
+      continue;
+    }
+
+    const benchmarks = [
+      ...toBenchmarkScores(model.scores),
+      ...(useCatalogPriors && catalogModel
+        ? buildCatalogPriorScores(catalogModel)
+        : []),
+    ];
+
+    if (benchmarks.length === 0) {
+      continue;
+    }
+
+    const name = catalogModel?.name ?? model.name;
+
+    recommendationCandidates.set(name, {
+      name,
+      provider: model.provider || catalogModel?.provider || "Unknown",
+      contextWindow: model.contextWindow ?? catalogModel?.contextWindow ?? null,
+      costInputPer1M:
+        model.costInputPer1M ?? catalogModel?.costInputPer1M ?? null,
+      costOutputPer1M:
+        model.costOutputPer1M ?? catalogModel?.costOutputPer1M ?? null,
+      benchmarks,
+    });
+  }
+
+  if (useCatalogPriors) {
+    for (const catalogModel of listCatalogModels()) {
+      if (recommendationCandidates.has(catalogModel.name)) {
+        continue;
+      }
+
+      const benchmarks = buildCatalogPriorScores(catalogModel);
+
+      if (benchmarks.length === 0) {
+        continue;
+      }
+
+      recommendationCandidates.set(catalogModel.name, {
+        name: catalogModel.name,
+        provider: catalogModel.provider,
+        contextWindow: catalogModel.contextWindow,
+        costInputPer1M: catalogModel.costInputPer1M,
+        costOutputPer1M: catalogModel.costOutputPer1M,
+        benchmarks,
+      });
+    }
+  }
+
+  const recommendations = rankModels(
+    Array.from(recommendationCandidates.values()),
     interpretation.dimensions,
     10,
   );

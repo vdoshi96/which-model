@@ -1,4 +1,8 @@
 import { auth } from "@/lib/auth";
+import {
+  buildCatalogPriorScores,
+  shouldUseCatalogPriors,
+} from "@/lib/catalogPriors";
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
 import { findCatalogModel, type CuratedModel } from "@/lib/modelCatalog";
@@ -9,9 +13,9 @@ import {
   RateLimitError,
 } from "@/lib/rateLimit";
 import {
-  BENCHMARK_DIMENSIONS,
   buildDimensionScores,
   calculateWeightedScore,
+  isUsableBenchmarkScore,
 } from "@/lib/scoring";
 import { compareRequestSchema } from "@/lib/validators/compare";
 import type { BenchmarkDimension, BenchmarkScore } from "@/types/model";
@@ -62,7 +66,7 @@ function toBenchmarkScores(
 ): BenchmarkScore[] {
   return scores
     .filter((score) =>
-      BENCHMARK_DIMENSIONS.includes(score.dimension as BenchmarkDimension),
+      isUsableBenchmarkScore(score),
     )
     .map((score) => ({
       source: score.source,
@@ -132,6 +136,7 @@ export async function POST(request: Request) {
     include: { scores: true },
   })) as ComparedModelRecord[];
   const modelsByNormalizedName = buildModelLookup(models);
+  const useCatalogPriors = shouldUseCatalogPriors(interpretation.dimensions);
   const resolvedModels = parsed.data.modelNames.map((modelName) => {
     const catalogModel = findCatalogModel(modelName);
     const model =
@@ -158,7 +163,12 @@ export async function POST(request: Request) {
     taskSummary: interpretation.summary,
     dimensions: interpretation.dimensions,
     models: resolvedModels.map(({ catalogModel, model, requestedName }) => {
-      const benchmarks = toBenchmarkScores(model?.scores ?? []);
+      const benchmarks = [
+        ...toBenchmarkScores(model?.scores ?? []),
+        ...(useCatalogPriors && catalogModel
+          ? buildCatalogPriorScores(catalogModel)
+          : []),
+      ];
       const name = catalogModel?.name ?? model?.name ?? requestedName;
 
       return {

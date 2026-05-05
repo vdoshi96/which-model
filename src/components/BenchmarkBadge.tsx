@@ -6,9 +6,21 @@ interface BenchmarkBadgeProps {
 }
 
 const SOURCE_STYLES: Record<string, { label: string; className: string }> = {
+  catalog_prior: {
+    label: "Catalog prior",
+    className: "border-accent text-accent",
+  },
+  aider_polyglot: {
+    label: "Aider",
+    className: "border-cyan-300 text-cyan-200",
+  },
   artificial_analysis: {
     label: "Artificial Analysis",
     className: "border-warning text-warning",
+  },
+  bfcl: {
+    label: "BFCL",
+    className: "border-fuchsia-300 text-fuchsia-200",
   },
   hf_leaderboard: {
     label: "HF Leaderboard",
@@ -21,6 +33,10 @@ const SOURCE_STYLES: Record<string, { label: string; className: string }> = {
   lmsys_arena: {
     label: "LMSYS Arena",
     className: "border-accent text-accent",
+  },
+  swe_bench: {
+    label: "SWE-bench",
+    className: "border-blue-300 text-blue-200",
   },
 };
 

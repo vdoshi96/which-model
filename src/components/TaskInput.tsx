@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
+import { parseRecommendationModelNames } from "@/lib/recommendationCache";
 import type { ApiError, ModelsResponse, RecommendResponse } from "@/types/api";
 
 const MAX_TASK_LENGTH = 500;
@@ -18,25 +19,17 @@ function readStoredModelNames() {
     return [];
   }
 
-  const raw =
-    window.sessionStorage.getItem(RECOMMENDATION_STORAGE_KEY) ??
-    window.localStorage.getItem(COMPARE_RECOMMENDATIONS_STORAGE_KEY);
+  const sessionNames = parseRecommendationModelNames(
+    window.sessionStorage.getItem(RECOMMENDATION_STORAGE_KEY),
+  );
 
-  if (!raw) {
-    return [];
+  if (sessionNames.length > 0) {
+    return sessionNames;
   }
 
-  try {
-    const parsed = JSON.parse(raw) as RecommendResponse | string[];
-
-    if (Array.isArray(parsed)) {
-      return parsed.filter(Boolean);
-    }
-
-    return parsed.recommendations.map((recommendation) => recommendation.model.name);
-  } catch {
-    return [];
-  }
+  return parseRecommendationModelNames(
+    window.localStorage.getItem(COMPARE_RECOMMENDATIONS_STORAGE_KEY),
+  );
 }
 
 function uniqueModelNames(names: string[]) {
@@ -185,7 +178,7 @@ export function TaskInput() {
               Analyzing your task...
             </span>
           ) : (
-            "Find Best Models"
+            compareSpecific ? "Compare Selected Models" : "Find Best Models"
           )}
         </Button>
       </div>

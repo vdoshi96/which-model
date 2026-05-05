@@ -5,6 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { RankingList } from "@/components/RankingList";
 import { Button } from "@/components/ui/Button";
+import {
+  parseRecommendationCache,
+  serializeRecommendationCache,
+} from "@/lib/recommendationCache";
 import type { ApiError, RecommendResponse } from "@/types/api";
 import type { BenchmarkDimension, TaskDimensions } from "@/types/model";
 
@@ -49,8 +53,7 @@ function readStoredRecommendation(task: string) {
   }
 
   try {
-    const parsed = JSON.parse(raw) as RecommendResponse;
-    return parsed.recommendations.length > 0 && task ? parsed : null;
+    return parseRecommendationCache(raw, task);
   } catch {
     return null;
   }
@@ -144,7 +147,7 @@ function ResultsPageContent() {
         setResult(payload as RecommendResponse);
         window.sessionStorage.setItem(
           RECOMMENDATION_STORAGE_KEY,
-          JSON.stringify(payload),
+          serializeRecommendationCache(task, payload as RecommendResponse),
         );
         setStatus("Loaded");
       } catch (requestError) {
@@ -234,7 +237,10 @@ function ResultsPageContent() {
             <div>
               <h2 className="font-mono text-xl font-semibold">Top 10 ranking</h2>
               <p className="mt-1 text-sm text-secondary">
-                Ranked by task-weighted benchmark fit.
+                Ranked by task weights, benchmark signals, and catalog priors
+                when public benchmark coverage is sparse. Cost affects the
+                score only when the task asks for cost efficiency and cost data
+                is available.
               </p>
             </div>
             <Button

@@ -1220,6 +1220,14 @@ export function mergeCatalogWithDbModels(
   for (const dbModel of dbModels) {
     const catalogModel = findCatalogModel(dbModel.name);
     const hasBenchmarks = (dbModel.scores?.length ?? 0) > 0;
+
+    if (
+      !catalogModel &&
+      (!hasBenchmarks || !isDisplayableModelName(dbModel.name))
+    ) {
+      continue;
+    }
+
     const option: CatalogModelOption = {
       name: dbModel.name,
       provider: dbModel.provider || catalogModel?.provider || "Unknown",
@@ -1265,4 +1273,8 @@ export function mergeCatalogWithDbModels(
   return Array.from(new Set(optionsByLookupName.values())).sort(
     sortByProviderThenName,
   );
+}
+
+export function isDisplayableModelName(name: string) {
+  return !/^https?:\/\//i.test(name.trim());
 }

@@ -7,6 +7,10 @@ import { ComparisonTable } from "@/components/ComparisonTable";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
+import {
+  buildInitialCompareSelection,
+  mergeSelectedWithRecommendations,
+} from "@/lib/compareSelection";
 import type {
   ApiError,
   CompareResponse,
@@ -105,13 +109,18 @@ function ComparePageContent() {
   useEffect(() => {
     const initialTask = taskFromUrl.trim() || readStoredTask();
     const storedRecommendations = readStoredRecommendations();
-    const initialSelection = uniqueModelNames([
-      ...selectedFromUrl,
-      ...storedRecommendations.slice(0, MAX_MODELS),
-    ]).slice(0, MAX_MODELS);
+    const initialSelection = buildInitialCompareSelection({
+      selectedFromUrl,
+      storedRecommendations,
+    });
 
     setTask(initialTask);
-    setModelOptions(uniqueModelNames([...storedRecommendations, ...initialSelection]));
+    setModelOptions(
+      uniqueModelNames([
+        ...initialSelection,
+        ...(selectedFromUrl.length > 0 ? [] : storedRecommendations),
+      ]),
+    );
     setSelectedModels(initialSelection);
   }, [taskFromUrl, searchParams]);
 
@@ -186,11 +195,19 @@ function ComparePageContent() {
         setModelOptions((current) =>
           uniqueModelNames([...current, ...recommendedNames]),
         );
-        setSelectedModels(recommendedNames);
-        window.localStorage.setItem(
-          RECOMMENDATIONS_STORAGE_KEY,
-          JSON.stringify(recommendedNames),
-        );
+        setSelectedModels((current) => {
+          const mergedSelection = mergeSelectedWithRecommendations({
+            recommendedNames,
+            selectedModels: current,
+          });
+
+          window.localStorage.setItem(
+            RECOMMENDATIONS_STORAGE_KEY,
+            JSON.stringify(mergedSelection),
+          );
+
+          return mergedSelection;
+        });
         setRecommendedTask(trimmedTask);
         setRecommendationStatus("Loaded");
       } catch (requestError) {
@@ -304,6 +321,20 @@ function ComparePageContent() {
         </div>
       </div>
 
+      <div className="sticky top-16 z-20 flex flex-col gap-3 border border-border bg-bg/95 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <p className="min-w-0 text-sm text-secondary">
+          {selectedModels.length > 0
+            ? `Selected: ${selectedModels.length} models - ${selectedSummary}`
+            : "Choose recommended models to compare."}
+        </p>
+        <Button
+          disabled={!canCompare || selectedModels.length > MAX_MODELS}
+          onClick={handleCompare}
+        >
+          {comparisonStatus === "Loading" ? "Comparing..." : "Compare Models"}
+        </Button>
+      </div>
+
       <ModelSelector
         maxModels={MAX_MODELS}
         minModels={MIN_MODELS}
@@ -314,20 +345,6 @@ function ComparePageContent() {
         }}
         selectedModels={selectedModels}
       />
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-secondary">
-          {selectedModels.length > 0
-            ? `Selected: ${selectedSummary}`
-            : "Choose recommended models to compare."}
-        </p>
-        <Button
-          disabled={!canCompare || selectedModels.length > MAX_MODELS}
-          onClick={handleCompare}
-        >
-          {comparisonStatus === "Loading" ? "Comparing..." : "Compare Models"}
-        </Button>
-      </div>
 
       <ComparisonTable
         dimensions={comparison?.dimensions}

@@ -50,8 +50,8 @@ export function ModelSelector({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-4 border border-border bg-surface p-4" data-testid="model-selector">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <label className="block flex-1 space-y-1">
           <span className="font-mono text-xs uppercase text-secondary">
             Search models
@@ -67,6 +67,32 @@ export function ModelSelector({
         </div>
       </div>
 
+      <div
+        className="flex min-h-11 flex-wrap items-center gap-2 border border-border bg-bg p-2"
+        data-testid="selected-models-strip"
+      >
+        {selectedModels.length > 0 ? (
+          selectedModels.map((model) => (
+            <button
+              className="inline-flex max-w-full items-center gap-2 border border-accent/70 bg-surface px-2.5 py-1.5 text-left font-mono text-xs text-primary transition hover:border-accent"
+              key={model}
+              onClick={() => toggleModel(model)}
+              type="button"
+            >
+              <span className="truncate">{model}</span>
+              <span aria-hidden="true" className="text-accent">
+                x
+              </span>
+              <span className="sr-only">Remove {model}</span>
+            </button>
+          ))
+        ) : (
+          <span className="px-1 font-mono text-xs text-secondary">
+            No models selected
+          </span>
+        )}
+      </div>
+
       {!hasMinimum ? (
         <p className="text-sm text-warning">
           Select at least {minModels} models to compare.
@@ -78,7 +104,10 @@ export function ModelSelector({
         </p>
       ) : null}
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        className="max-h-80 overflow-y-auto border border-border bg-bg"
+        data-testid="model-options-list"
+      >
         {filteredModels.length > 0 ? (
           filteredModels.map((model) => {
             const checked = selectedModels.includes(model);
@@ -87,11 +116,11 @@ export function ModelSelector({
             return (
               <label
                 className={cn(
-                  "flex min-h-14 items-center gap-3 border border-border bg-surface p-3 text-sm transition",
+                  "flex min-h-12 items-center gap-3 border-b border-border px-3 py-2 text-sm transition last:border-b-0",
                   disabled
                     ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer hover:border-secondary",
-                  checked && "border-accent",
+                    : "cursor-pointer hover:bg-surface",
+                  checked && "bg-surface text-accent",
                 )}
                 key={model}
               >
@@ -101,12 +130,14 @@ export function ModelSelector({
                   onChange={() => toggleModel(model)}
                   type="checkbox"
                 />
-                <span className="break-words font-mono leading-5">{model}</span>
+                <span className="min-w-0 flex-1 break-words font-mono leading-5">
+                  {model}
+                </span>
               </label>
             );
           })
         ) : (
-          <div className="border border-border bg-surface p-4 text-sm text-secondary">
+          <div className="p-4 text-sm text-secondary">
             No matching models found.
           </div>
         )}

@@ -1,11 +1,14 @@
 import { getPrisma } from "@/lib/db";
 import { applyCatalogMetadata } from "@/lib/modelCatalog";
 
+import { fetchAiderPolyglot } from "./aider";
 import { fetchArtificialAnalysis } from "./artificialAnalysis";
+import { fetchBfcl } from "./bfcl";
 import { fetchHfLeaderboard } from "./hfLeaderboard";
 import { fetchLiveBench } from "./livebench";
 import { fetchLmsysArena } from "./lmsysArena";
 import { clampScore } from "./normalization";
+import { fetchSweBench } from "./sweBench";
 import type { NormalizedBenchmarkRecord } from "./types";
 
 type Fetcher = {
@@ -18,6 +21,9 @@ const fetchers: Fetcher[] = [
   { source: "lmsys_arena", fetch: fetchLmsysArena },
   { source: "hf_leaderboard", fetch: fetchHfLeaderboard },
   { source: "livebench", fetch: fetchLiveBench },
+  { source: "aider_polyglot", fetch: fetchAiderPolyglot },
+  { source: "swe_bench", fetch: fetchSweBench },
+  { source: "bfcl", fetch: fetchBfcl },
 ];
 
 export async function fetchAllBenchmarkSources(): Promise<
@@ -51,6 +57,7 @@ export interface BenchmarkRefreshResult {
   recordsFetched: number;
   modelsUpserted: number;
   scoresUpserted: number;
+  scoresDeleted?: number;
 }
 
 type BenchmarkPrisma = {
@@ -73,6 +80,12 @@ type BenchmarkPrisma = {
       create: BenchmarkScoreCreateInput;
       update: BenchmarkScoreUpdateInput;
     }) => Promise<unknown>;
+    deleteMany?: (args: {
+      where: {
+        source: string;
+        rawLabel: { startsWith: string };
+      };
+    }) => Promise<{ count: number }>;
   };
 };
 
@@ -109,8 +122,10 @@ export async function refreshBenchmarkData(
   prisma: BenchmarkPrisma = getPrisma(),
 ): Promise<BenchmarkRefreshResult> {
   const records = await fetchAllBenchmarkSources();
+  const result = await upsertBenchmarkRecords(records, prisma);
+  const scoresDeleted = await deleteKnownInvalidBenchmarkArtifacts(prisma);
 
-  return upsertBenchmarkRecords(records, prisma);
+  return { ...result, scoresDeleted };
 }
 
 export async function upsertBenchmarkRecords(
@@ -188,6 +203,21 @@ function buildModelUpdate(
   }
 
   return update;
+}
+
+async function deleteKnownInvalidBenchmarkArtifacts(prisma: BenchmarkPrisma) {
+  if (!prisma.benchmarkScore.deleteMany) {
+    return 0;
+  }
+
+  const result = await prisma.benchmarkScore.deleteMany({
+    where: {
+      source: "livebench",
+      rawLabel: { startsWith: "LiveBench " },
+    },
+  });
+
+  return result.count;
 }
 
 function dedupeRecords(

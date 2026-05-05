@@ -136,13 +136,30 @@ describe("recommend and compare API routes", () => {
         costOutputPer1M: 1.2,
         scores: [{ id: "score-1" }],
       },
+      {
+        name: "Old Unbenchmarked Artifact",
+        provider: "Unknown",
+        contextWindow: null,
+        costInputPer1M: null,
+        costOutputPer1M: null,
+        scores: [],
+      },
+      {
+        name: "https://huggingface.co/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+        provider: "Alibaba",
+        contextWindow: null,
+        costInputPer1M: null,
+        costOutputPer1M: null,
+        scores: [{ id: "score-2" }],
+      },
     ]);
     const { GET } = await import("@/app/api/models/route");
 
     const response = await GET();
+    const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    expect(body).toMatchObject({
       models: expect.arrayContaining([
         expect.objectContaining({
           name: "Benchmark Only Model",
@@ -158,6 +175,16 @@ describe("recommend and compare API routes", () => {
         }),
       ]),
     });
+    expect(
+      body.models.some(
+        (model: { name: string }) => model.name === "Old Unbenchmarked Artifact",
+      ),
+    ).toBe(false);
+    expect(
+      body.models.some((model: { name: string }) =>
+        model.name.startsWith("https://huggingface.co/"),
+      ),
+    ).toBe(false);
   });
 
   it("lets the admin request recommendations without consuming rate limit quota", async () => {
@@ -224,6 +251,144 @@ describe("recommend and compare API routes", () => {
           model: expect.objectContaining({ name: "Benchmarked Model" }),
         }),
       ],
+    });
+  });
+
+  it("filters stale binary LiveBench artifacts from recommendations", async () => {
+    mockInterpretTask.mockResolvedValue({
+      refused: false,
+      dimensions: {
+        reasoning: 1,
+        coding: 1,
+        math: 0,
+        instruction_following: 0,
+        overall: 0,
+        speed: 0,
+        cost_efficiency: 0,
+      },
+      summary: "This task needs both reasoning and coding.",
+    });
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "Narrow Artifact",
+        provider: "Provider",
+        contextWindow: 128000,
+        costInputPer1M: 1,
+        costOutputPer1M: 2,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "coding",
+            score: 100,
+            rawLabel: "LiveBench coding",
+          },
+        ],
+      },
+      {
+        name: "Balanced Model",
+        provider: "Provider",
+        contextWindow: 128000,
+        costInputPer1M: 1,
+        costOutputPer1M: 2,
+        scores: [
+          {
+            source: "livebench",
+            dimension: "coding",
+            score: 80,
+            rawLabel: "Coding",
+          },
+          {
+            source: "hf_leaderboard",
+            dimension: "reasoning",
+            score: 80,
+            rawLabel: "MMLU-Pro",
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({ task: "Pick a coding model for UI work." }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      recommendations: [
+        expect.objectContaining({
+          model: expect.objectContaining({ name: "Balanced Model" }),
+          score: 80,
+        }),
+      ],
+    });
+  });
+
+  it("uses curated frontier priors and metadata for broad creative recommendations", async () => {
+    mockInterpretTask.mockResolvedValue({
+      refused: false,
+      dimensions: {
+        reasoning: 0.2,
+        coding: 0,
+        math: 0,
+        instruction_following: 0.7,
+        overall: 0.9,
+        speed: 0,
+        cost_efficiency: 0,
+      },
+      summary: "Song writing needs broad quality and instruction following.",
+    });
+    mockModelFindMany.mockResolvedValue([
+      {
+        name: "deepseek-ai/DeepSeek-R1-0528",
+        provider: "deepseek-ai",
+        contextWindow: null,
+        costInputPer1M: null,
+        costOutputPer1M: null,
+        scores: [
+          {
+            source: "hf_leaderboard",
+            dimension: "overall",
+            score: 85,
+            rawLabel: "HF Leaderboard",
+          },
+          {
+            source: "hf_leaderboard",
+            dimension: "reasoning",
+            score: 85,
+            rawLabel: "HF Leaderboard",
+          },
+        ],
+      },
+    ]);
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({ task: "write a song" }),
+      }),
+    );
+    const body = await response.json();
+    const topNames = body.recommendations
+      .slice(0, 5)
+      .map((recommendation: { model: { name: string } }) => recommendation.model.name);
+
+    expect(response.status).toBe(200);
+    expect(topNames).toContain("GPT-5.5");
+    expect(topNames).toContain("Claude Opus 4.7");
+    expect(topNames[0]).not.toBe("deepseek-ai/DeepSeek-R1-0528");
+    expect(body.recommendations[0]).toMatchObject({
+      model: expect.objectContaining({
+        contextWindow: expect.any(Number),
+        costInputPer1M: expect.any(Number),
+        costOutputPer1M: expect.any(Number),
+      }),
+      benchmarksUsed: expect.arrayContaining([
+        expect.objectContaining({ source: "catalog_prior" }),
+      ]),
     });
   });
 
@@ -454,6 +619,59 @@ describe("recommend and compare API routes", () => {
         }),
       ],
     });
+  });
+
+  it("compares catalog-only frontier models with curated priors for broad creative tasks", async () => {
+    mockInterpretTask.mockResolvedValue({
+      refused: false,
+      dimensions: {
+        reasoning: 0.2,
+        coding: 0,
+        math: 0,
+        instruction_following: 0.7,
+        overall: 0.9,
+        speed: 0,
+        cost_efficiency: 0,
+      },
+      summary: "Song writing needs broad quality and instruction following.",
+    });
+    mockModelFindMany.mockResolvedValue([]);
+    const { POST } = await import("@/app/api/compare/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/compare", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "write a song",
+          modelNames: ["GPT-5.5", "Claude Opus 4.7"],
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.models).toEqual([
+      expect.objectContaining({
+        name: "GPT-5.5",
+        contextWindow: 1_000_000,
+        scores: expect.objectContaining({
+          overall: expect.any(Number),
+          instruction_following: expect.any(Number),
+        }),
+        weightedScore: expect.any(Number),
+      }),
+      expect.objectContaining({
+        name: "Claude Opus 4.7",
+        contextWindow: 1_000_000,
+        scores: expect.objectContaining({
+          overall: expect.any(Number),
+          instruction_following: expect.any(Number),
+        }),
+        weightedScore: expect.any(Number),
+      }),
+    ]);
+    expect(body.models[0].weightedScore).toBeGreaterThan(80);
+    expect(body.models[1].weightedScore).toBeGreaterThan(80);
   });
 
   it("uses alias-backed DB benchmark scores when comparing a catalog display name", async () => {

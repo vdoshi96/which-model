@@ -77,6 +77,18 @@ describe("interpretTask", () => {
         },
       ],
     });
+    expect(DEEPSEEK_SYSTEM_PROMPT).toContain(
+      "For applied software tasks such as UI redesign",
+    );
+    expect(DEEPSEEK_SYSTEM_PROMPT).toContain(
+      "avoid putting all weight on a single dimension",
+    );
+    expect(DEEPSEEK_SYSTEM_PROMPT).toContain(
+      "For creative writing tasks such as songs",
+    );
+    expect(DEEPSEEK_SYSTEM_PROMPT).toContain(
+      "use cost_efficiency only when the user mentions budget",
+    );
   });
 
   it("caps user input at 500 characters before sending to DeepSeek", async () => {

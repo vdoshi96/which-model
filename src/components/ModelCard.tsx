@@ -24,6 +24,10 @@ function formatContext(contextWindow: number | null) {
     : `${contextWindow.toLocaleString()} tokens`;
 }
 
+function formatSignalCount(count: number) {
+  return `${count} scoring ${count === 1 ? "signal" : "signals"}`;
+}
+
 export function ModelCard({ recommendation }: ModelCardProps) {
   return (
     <Card className="space-y-4">
@@ -55,6 +59,9 @@ export function ModelCard({ recommendation }: ModelCardProps) {
           />
         ))}
       </div>
+      <p className="font-mono text-xs text-secondary">
+        {formatSignalCount(recommendation.benchmarksUsed.length)}
+      </p>
       <div className="grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
         <div>
           <p className="font-mono text-xs uppercase text-secondary">

@@ -10,6 +10,8 @@ import {
   type SourceRow,
 } from "./sourceUtils";
 
+const MIN_JUDGMENT_ROWS_PER_MODEL_DIMENSION = 2;
+
 const directJsonCandidates = [
   "https://raw.githubusercontent.com/LiveBench/LiveBench/main/livebench/data/results.json",
   "https://raw.githubusercontent.com/livebench-ai/livebench/main/livebench/data/results.json",
@@ -49,6 +51,12 @@ const dimensionMappings = [
     ],
   },
 ];
+
+const judgmentCategoryDimensions: Partial<
+  Record<string, NormalizedBenchmarkRecord["dimension"]>
+> = Object.fromEntries(
+  dimensionMappings.map((mapping) => [mapping.dimension, mapping.dimension]),
+);
 
 export async function fetchLiveBench(): Promise<NormalizedBenchmarkRecord[]> {
   for (const url of directJsonCandidates) {
@@ -121,60 +129,67 @@ function extractLiveBenchRecords(rows: SourceRow[]): NormalizedBenchmarkRecord[]
   });
 }
 
-function extractLiveBenchJudgmentRecords(
+export function extractLiveBenchJudgmentRecords(
   rows: SourceRow[],
 ): NormalizedBenchmarkRecord[] {
-  const groupedScores = new Map<string, { total: number; count: number }>();
+  const groups = new Map<
+    string,
+    {
+      category: string;
+      modelName: string;
+      scores: number[];
+    }
+  >();
 
   for (const row of rows) {
-    const modelName = getString(row, ["model", "model_id", "modelName"]);
-    const category = getString(row, ["category", "Category"]);
+    const modelName = getString(row, ["model", "model_name", "Model"]);
+    const category = getString(row, ["category", "Category"])?.toLowerCase();
     const score = getNumber(row, ["score", "Score"]);
-    const dimension = mapCategoryToDimension(category);
 
-    if (!modelName || !dimension || score === undefined) {
+    if (!modelName || !category || score === undefined) {
       continue;
     }
 
-    const key = `${modelName}::${dimension}`;
-    const existing = groupedScores.get(key) ?? { total: 0, count: 0 };
+    if (!judgmentCategoryDimensions[category]) {
+      continue;
+    }
 
-    existing.total += score;
-    existing.count += 1;
-    groupedScores.set(key, existing);
+    const key = `${modelName}::${category}`;
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.scores.push(score);
+    } else {
+      groups.set(key, {
+        category: category as keyof typeof judgmentCategoryDimensions,
+        modelName,
+        scores: [score],
+      });
+    }
   }
 
-  return Array.from(groupedScores.entries()).map(([key, value]) => {
-    const [modelName, dimension] = key.split("::") as [
-      string,
-      NormalizedBenchmarkRecord["dimension"],
+  return Array.from(groups.values()).flatMap((group) => {
+    if (group.scores.length < MIN_JUDGMENT_ROWS_PER_MODEL_DIMENSION) {
+      return [];
+    }
+
+    const average =
+      group.scores.reduce((sum, score) => sum + score, 0) / group.scores.length;
+    const dimension = judgmentCategoryDimensions[group.category];
+
+    if (!dimension) {
+      return [];
+    }
+
+    return [
+      {
+        modelName: group.modelName,
+        provider: inferProvider(group.modelName),
+        source: "livebench" as const,
+        dimension,
+        score: normalizePercentageScore(average),
+        rawLabel: `LiveBench ${group.category}`,
+      },
     ];
-
-    return {
-      modelName,
-      provider: inferProvider(modelName),
-      source: "livebench",
-      dimension,
-      score: normalizePercentageScore(value.total / value.count),
-      rawLabel: `LiveBench ${dimension.replaceAll("_", " ")}`,
-    };
   });
-}
-
-function mapCategoryToDimension(
-  category: string | undefined,
-): NormalizedBenchmarkRecord["dimension"] | undefined {
-  switch (category?.toLowerCase()) {
-    case "reasoning":
-      return "reasoning";
-    case "math":
-      return "math";
-    case "coding":
-      return "coding";
-    case "instruction_following":
-    case "instruction following":
-      return "instruction_following";
-    default:
-      return undefined;
-  }
 }

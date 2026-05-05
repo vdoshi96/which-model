@@ -23,6 +23,19 @@ Output ONLY valid JSON. No preamble, no explanation, no markdown. Example output
 If the input is not a task description for LLM selection, return:
 { "refused": true, "reason": "brief reason" }
 
+Dimension guide:
+- reasoning: planning, synthesis, debugging, architectural judgment, multi-step analysis
+- coding: writing, refactoring, testing, reviewing, or redesigning software
+- instruction_following: adherence to constraints, format, tool-use details, and user intent
+- overall: broad general model quality when the task is not captured by one narrow benchmark
+- math: quantitative or formal symbolic work
+- speed: latency-sensitive work
+- cost_efficiency: budget-sensitive or high-volume work
+
+For applied software tasks such as UI redesign, app debugging, code review, implementation planning, or product engineering, assign meaningful non-zero weights to coding, instruction_following, reasoning, and usually overall. You should avoid putting all weight on a single dimension unless the task is explicitly and narrowly about one measurable capability.
+
+For creative writing tasks such as songs, poems, stories, speeches, or brand copy, assign high weights to overall and instruction_following, a modest weight to reasoning, and zero weight to coding and math. For all tasks, use cost_efficiency only when the user mentions budget, price, cheapness, throughput, scale, or cost constraints; use speed only when the user mentions latency, real-time use, or turnaround time.
+
 All weight values must be between 0.0 and 1.0.`;
 
 const taskDimensionsSchema = z.object({

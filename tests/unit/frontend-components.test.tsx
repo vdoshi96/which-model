@@ -77,8 +77,30 @@ describe("ModelCard", () => {
     expect(screen.getByText(/LMSYS Arena/)).toBeInTheDocument();
     expect(screen.getByText(/Artificial Analysis/)).toBeInTheDocument();
     expect(screen.queryByText(/HF Leaderboard/)).not.toBeInTheDocument();
+    expect(screen.getByText("4 scoring signals")).toBeInTheDocument();
     expect(screen.getByText("$3.00 / $15.00")).toBeInTheDocument();
     expect(screen.getByText("200,000 tokens")).toBeInTheDocument();
+  });
+
+  it("labels catalog prior signals clearly", () => {
+    render(
+      <ModelCard
+        recommendation={{
+          ...recommendation,
+          benchmarksUsed: [
+            {
+              source: "catalog_prior",
+              dimension: "overall",
+              score: 97,
+              rawLabel: "Curated catalog prior",
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/Catalog prior/)).toBeInTheDocument();
+    expect(screen.getByText("1 scoring signal")).toBeInTheDocument();
   });
 
   it("renders unknown cost and context without empty gaps", () => {
@@ -154,6 +176,49 @@ describe("TaskInput", () => {
     expect(
       screen.queryByText(/Run a recommendation once to populate model choices/),
     ).not.toBeInTheDocument();
+  });
+
+  it("loads model choices from the versioned recommendation cache", async () => {
+    window.sessionStorage.setItem(
+      "which-model:last-recommendation",
+      JSON.stringify({
+        version: 2,
+        task: "write a song",
+        payload: {
+          taskSummary: "Creative writing needs broad quality.",
+          dimensions: {
+            reasoning: 0.2,
+            coding: 0,
+            math: 0,
+            instruction_following: 0.7,
+            overall: 0.9,
+            speed: 0,
+            cost_efficiency: 0,
+          },
+          recommendations: [
+            {
+              rank: 1,
+              model: {
+                name: "GPT-5.5",
+                provider: "OpenAI",
+                contextWindow: 1000000,
+                costInputPer1M: 5,
+                costOutputPer1M: 30,
+              },
+              score: 96,
+              benchmarksUsed: [],
+            },
+          ],
+        },
+      }),
+    );
+    render(<TaskInput />);
+
+    fireEvent.click(screen.getByLabelText("Compare specific models"));
+
+    await waitFor(() => {
+      expect(screen.getByText("GPT-5.5")).toBeInTheDocument();
+    });
   });
 });
 

@@ -1,5 +1,9 @@
 
-import { buildDimensionScores, rankModels } from "@/lib/scoring";
+import {
+  buildDimensionScores,
+  isUsableBenchmarkScore,
+  rankModels,
+} from "@/lib/scoring";
 
 describe("scoring", () => {
   it("ranks models by weighted benchmark average and returns benchmarks used", () => {
@@ -77,5 +81,71 @@ describe("scoring", () => {
         1,
       )[0]?.score,
     ).toBeCloseTo(0.5);
+  });
+
+  it("gives specialized benchmark sources more influence in their strongest dimensions", () => {
+    const scores = buildDimensionScores([
+      { source: "livebench", dimension: "coding", score: 60 },
+      { source: "swe_bench", dimension: "coding", score: 90 },
+    ]);
+
+    expect(scores.coding).toBeCloseTo(76.36, 2);
+  });
+
+  it("penalizes models that are missing dimensions the task asks for", () => {
+    const ranked = rankModels(
+      [
+        {
+          name: "Narrow Coding Spike",
+          provider: "Acme",
+          contextWindow: null,
+          costInputPer1M: null,
+          costOutputPer1M: null,
+          benchmarks: [
+            { source: "livebench", dimension: "coding", score: 100 },
+          ],
+        },
+        {
+          name: "Balanced Model",
+          provider: "Acme",
+          contextWindow: null,
+          costInputPer1M: null,
+          costOutputPer1M: null,
+          benchmarks: [
+            { source: "livebench", dimension: "coding", score: 80 },
+            { source: "livebench", dimension: "reasoning", score: 80 },
+          ],
+        },
+      ],
+      { coding: 1, reasoning: 1 },
+      2,
+    );
+
+    expect(ranked.map((model) => model.model.name)).toEqual([
+      "Balanced Model",
+      "Narrow Coding Spike",
+    ]);
+    expect(ranked[1]?.score).toBe(50);
+  });
+
+  it("rejects stale binary LiveBench artifacts for every LiveBench dimension", () => {
+    for (const dimension of ["reasoning", "coding", "math", "instruction_following"]) {
+      expect(
+        isUsableBenchmarkScore({
+          source: "livebench",
+          dimension,
+          score: 100,
+          rawLabel: `LiveBench ${dimension}`,
+        }),
+      ).toBe(false);
+      expect(
+        isUsableBenchmarkScore({
+          source: "livebench",
+          dimension,
+          score: 0,
+          rawLabel: `LiveBench ${dimension}`,
+        }),
+      ).toBe(false);
+    }
   });
 });
