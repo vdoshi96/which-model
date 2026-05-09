@@ -1,201 +1,233 @@
 import Link from "next/link";
 
-const sourceRows = [
-  { name: "LiveBench", status: "reasoning + coding", score: "0.94" },
-  { name: "SWE-bench", status: "software fixes", score: "67.2" },
-  { name: "BFCL", status: "tool calling", score: "77.5" },
-  { name: "Aider", status: "code editing", score: "88.0" },
-];
-
-const rankingRows = [
-  { model: "Claude Sonnet 4.6", detail: "1M context", score: "92" },
-  { model: "GPT-5.4", detail: "frontier reasoning", score: "89" },
-  { model: "Gemini 3 Pro", detail: "large context", score: "86" },
-];
-
-const workflowPanels = [
+const featureRows = [
   {
-    title: "Built from evidence",
-    copy: "Benchmarks are normalized by task dimension, then weighted by how relevant each source is to the job.",
+    title: "Evidence first",
+    copy: "Evaluate public benchmark signals and see what shaped the answer.",
   },
   {
-    title: "Compare without the wall",
-    copy: "Pick models from a compact searchable list, keep selected models visible, and run comparisons from a fixed action bar.",
+    title: "Task aware",
+    copy: "Tune recommendations by context length, cost, latency, and model tier.",
   },
   {
-    title: "No email required",
-    copy: "Create an account with only a username and password, then keep every model search tied to your own history.",
+    title: "Easy to compare",
+    copy: "Move from a ranked shortlist into a side-by-side comparison flow.",
   },
 ];
 
-const mockRuns = [
-  {
-    title: "Legal reasoning summary",
-    rows: ["task weights parsed", "7 sources blended", "top 10 ranked"],
-  },
-  {
-    title: "Coding agent comparison",
-    rows: ["SWE-bench added", "Aider added", "side-by-side ready"],
-  },
+const previewSources = [
+  { name: "LiveBench", score: "0.94", width: "88%" },
+  { name: "SWE-bench", score: "67.2", width: "62%" },
+  { name: "BFCL", score: "77.5", width: "74%" },
 ];
+
+function FeatureIcon({ index }: { index: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-[6px] border border-accent/45 bg-accent/10 text-accent"
+    >
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 20 20">
+        <path
+          d={
+            index === 0
+              ? "M10 3.5 15.5 6.7v6.6L10 16.5l-5.5-3.2V6.7L10 3.5Z"
+              : index === 1
+                ? "M4.5 10h11M10 4.5v11M6.2 6.2l7.6 7.6M13.8 6.2l-7.6 7.6"
+                : "M5 6h10M5 10h10M5 14h6"
+          }
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+        />
+      </svg>
+    </span>
+  );
+}
 
 export function SplashScreen() {
   return (
-    <section className="space-y-10 pb-10">
-      <div className="relative overflow-hidden border border-border bg-surface">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              "linear-gradient(90deg, rgba(229,255,71,0.12) 1px, transparent 1px), linear-gradient(0deg, rgba(255,255,255,0.07) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
-        <div className="relative mx-auto max-w-5xl px-4 py-10 text-center sm:px-8 sm:py-14">
-          <p className="font-mono text-sm uppercase tracking-[0.18em] text-accent">
-            which-model
-          </p>
-          <h1 className="mx-auto mt-4 max-w-4xl font-mono text-4xl font-semibold leading-tight text-primary sm:text-6xl">
-            Pick the model that actually fits the work.
+    <section className="relative overflow-hidden rounded-[8px] border border-border bg-surface shadow-[var(--shadow-soft)]">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, rgba(92,225,216,0.08) 1px, transparent 1px), linear-gradient(0deg, rgba(246,248,251,0.04) 1px, transparent 1px)",
+          backgroundSize: "42px 42px",
+          maskImage:
+            "linear-gradient(120deg, black 0%, black 52%, transparent 84%)",
+        }}
+      />
+      <div className="relative grid min-h-[calc(100vh-8rem)] gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[0.86fr_1.14fr] lg:px-12 lg:py-12">
+        <div className="flex flex-col justify-center">
+          <h1 className="max-w-xl text-4xl font-semibold leading-[1.04] text-primary sm:text-6xl">
+            Choose the right LLM for your task.
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-secondary sm:text-lg">
-            Describe the task, blend public benchmark evidence, and get a
-            recommendation that explains why a model belongs on the shortlist.
+          <p className="mt-5 max-w-lg text-base leading-7 text-secondary">
+            which-model analyzes benchmark evidence to recommend and compare
+            LLMs that fit your needs: fast, objective, and transparent.
           </p>
-          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link
-              className="inline-flex min-h-11 items-center justify-center border border-accent bg-accent px-5 py-2 font-mono text-sm font-medium text-black transition hover:bg-primary"
-              href="/auth/signup"
-            >
-              Sign up
-            </Link>
-            <Link
-              className="inline-flex min-h-11 items-center justify-center border border-border bg-bg px-5 py-2 font-mono text-sm font-medium text-primary transition hover:border-secondary"
-              href="/auth/signin"
-            >
-              Sign in
-            </Link>
+
+          <div className="mt-8 space-y-5">
+            {featureRows.map((row, index) => (
+              <div className="flex gap-4" key={row.title}>
+                <FeatureIcon index={index} />
+                <div>
+                  <h2 className="text-sm font-semibold text-primary">
+                    {row.title}
+                  </h2>
+                  <p className="mt-1 max-w-sm text-sm leading-6 text-secondary">
+                    {row.copy}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div
-            aria-label="which-model recommendation workflow preview"
-            className="mx-auto mt-10 max-w-5xl border border-border bg-bg text-left shadow-2xl shadow-black/30"
-            role="img"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <p className="mt-8 text-sm text-muted">
+            No email required. Built for engineers, AI builders, and product
+            teams.
+          </p>
+        </div>
+
+        <div className="flex items-center">
+          <div className="w-full rounded-[8px] border border-border-strong bg-raised p-4 shadow-[var(--shadow-soft)] sm:p-5">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.14em] text-secondary">
-                  Model evidence run
-                </p>
-                <p className="mt-1 text-sm text-primary">
-                  Pick a model for a production coding agent with tool calls.
-                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-primary">
+                      Try it now
+                    </h2>
+                    <p className="mt-1 text-sm text-secondary">
+                      Describe your task to get personalized recommendations.
+                    </p>
+                  </div>
+                  <Link
+                    className="hidden rounded-[6px] border border-border px-3 py-2 text-sm text-secondary transition hover:border-secondary hover:text-primary sm:inline-flex"
+                    href="/auth/signin"
+                  >
+                    Sign in
+                  </Link>
+                </div>
+
+                <div className="mt-4 rounded-[6px] border border-border bg-soft p-4">
+                  <p className="min-h-28 text-sm leading-6 text-muted">
+                    Describe what you need an LLM to do...
+                  </p>
+                  <p className="mt-2 text-right font-mono text-[11px] text-muted">
+                    0/500
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  <p className="font-mono text-xs uppercase text-secondary">
+                    Preferences
+                  </p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {[
+                      "Cost conscious",
+                      "Prefer frontier models",
+                      "Need long context",
+                      "Low latency",
+                      "Local-only",
+                    ].map((label, index) => (
+                      <label
+                        className="flex min-h-9 items-center gap-2 rounded-[6px] border border-border bg-soft px-2.5 py-2 text-xs leading-4 text-secondary"
+                        key={label}
+                      >
+                        <input
+                          checked={index === 2}
+                          className="h-3.5 w-3.5 accent-accent"
+                          readOnly
+                          type="checkbox"
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <Link
+                  className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[6px] border border-accent bg-accent px-5 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(200,255,38,0.12)] transition hover:bg-primary"
+                  href="/auth/signup"
+                >
+                  Find Best Models
+                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 20 20">
+                    <path
+                      d="M4 10h11M11 6l4 4-4 4"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.7"
+                    />
+                  </svg>
+                </Link>
               </div>
-              <span className="border border-success px-2 py-1 font-mono text-xs text-success">
-                passed
-              </span>
+
+              <div className="rounded-[8px] border border-border bg-soft p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-primary">
+                    Evidence preview
+                  </p>
+                  <span className="font-mono text-[11px] uppercase text-muted">
+                    sample
+                  </span>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {previewSources.map((source) => (
+                    <div key={source.name}>
+                      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                        <span className="text-secondary">{source.name}</span>
+                        <span className="font-mono text-cyan">{source.score}</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-border">
+                        <span
+                          className="block h-full rounded-full bg-cyan"
+                          style={{ width: source.width }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 rounded-[6px] border border-border bg-surface p-3">
+                  <p className="font-mono text-[11px] uppercase text-muted">
+                    Ranked shortlist
+                  </p>
+                  <div className="mt-3 space-y-2 text-sm">
+                    {["GPT-4o", "Claude 3.5 Sonnet", "Gemini 1.5 Pro"].map(
+                      (model, index) => (
+                        <div
+                          className="grid grid-cols-[1.5rem_1fr_2.5rem] items-center gap-2 rounded-[5px] border border-border bg-soft px-2 py-2"
+                          key={model}
+                        >
+                          <span className="font-mono text-xs text-muted">
+                            #{index + 1}
+                          </span>
+                          <span className="truncate text-primary">{model}</span>
+                          <span className="text-right font-mono text-cyan">
+                            {92 - index * 3}
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
-              <div className="border-b border-border p-4 lg:border-b-0 lg:border-r">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {sourceRows.map((source) => (
-                    <div className="border border-border bg-surface p-3" key={source.name}>
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-mono text-sm text-primary">
-                          {source.name}
-                        </p>
-                        <span className="font-mono text-xs text-accent">
-                          {source.score}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-xs text-secondary">{source.status}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 grid grid-cols-7 gap-1" aria-hidden="true">
-                  {[68, 44, 91, 57, 82, 73, 96].map((height, index) => (
-                    <span
-                      className="block border border-border bg-bg"
-                      key={`${height}-${index}`}
-                      style={{ height: `${height}px` }}
-                    >
-                      <span className="block h-full bg-accent/80" />
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="p-4">
-                <p className="font-mono text-xs uppercase tracking-[0.14em] text-secondary">
-                  Ranked shortlist
-                </p>
-                <div className="mt-3 space-y-2">
-                  {rankingRows.map((row, index) => (
-                    <div
-                      className="grid grid-cols-[2rem_1fr_3rem] items-center gap-3 border border-border bg-surface px-3 py-2"
-                      key={row.model}
-                    >
-                      <span className="font-mono text-xs text-secondary">
-                        #{index + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-mono text-sm text-primary">
-                          {row.model}
-                        </p>
-                        <p className="text-xs text-secondary">{row.detail}</p>
-                      </div>
-                      <span className="text-right font-mono text-sm text-accent">
-                        {row.score}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 border border-border bg-black p-3 font-mono text-xs leading-6 text-secondary">
-                  <p className="text-primary">analysis.complete()</p>
-                  <p>weights: coding 1.00, tools 0.74, cost 0.31</p>
-                  <p>evidence: 7 public benchmark sources blended</p>
-                </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted">
+              <span>Scoring combines task weights with curated evidence.</span>
+              <div className="flex gap-4">
+                <span>Benchmarks</span>
+                <span>Compare</span>
+                <span>Privacy</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {workflowPanels.map((panel) => (
-          <div className="border border-border bg-surface p-5" key={panel.title}>
-            <h2 className="font-mono text-base font-semibold text-primary">
-              {panel.title}
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-secondary">{panel.copy}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {mockRuns.map((run) => (
-          <div className="border border-border bg-surface p-4" key={run.title}>
-            <p className="font-mono text-xs uppercase text-secondary">
-              Mock test run
-            </p>
-            <h2 className="mt-2 font-mono text-base font-semibold text-primary">
-              {run.title}
-            </h2>
-            <div className="mt-4 space-y-2">
-              {run.rows.map((row, index) => (
-                <div
-                  className="flex items-center justify-between gap-3 border border-border bg-bg px-3 py-2"
-                  key={row}
-                >
-                  <span className="text-sm text-primary">{row}</span>
-                  <span className="font-mono text-xs text-secondary">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
     </section>
   );

@@ -36,6 +36,9 @@ const PREFERENCE_CONTROLS: Array<{
   { key: "localOnly", label: "Local-only" },
 ];
 
+const checkboxClassName =
+  "h-4 w-4 rounded border-border bg-soft accent-accent focus:ring-0";
+
 function readStoredModelNames() {
   if (typeof window === "undefined") {
     return [];
@@ -185,48 +188,52 @@ export function TaskInput() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="rounded-[8px] border border-border-strong bg-surface p-4 shadow-[var(--shadow-soft)] sm:p-5">
       {apiError ? (
-        <div className="border border-danger bg-surface p-3 text-sm text-danger">
+        <div className="mb-4 rounded-[6px] border border-danger/70 bg-danger/10 p-3 text-sm text-danger">
           {apiError}
         </div>
       ) : null}
-      <Textarea
-        aria-describedby="task-counter"
-        maxLength={MAX_TASK_LENGTH}
-        onChange={(event) => {
-          setTask(event.target.value);
-          setError("");
-          setApiError("");
-        }}
-        placeholder="Describe what you need an LLM to do..."
-        value={task}
-      />
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="font-mono text-xs text-secondary" id="task-counter">
-          {task.length}/{MAX_TASK_LENGTH}
-        </span>
-        <Button disabled={isLoading} onClick={handleSubmit}>
-          {isLoading ? (
-            <span className="inline-flex items-center gap-2">
-              <span className="h-3 w-3 animate-spin border border-black border-t-transparent" />
-              Analyzing your task...
-            </span>
-          ) : (
-            compareSpecific ? "Compare Selected Models" : "Find Best Models"
-          )}
-        </Button>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <label
+            className="font-mono text-sm font-semibold uppercase text-primary"
+            htmlFor="task-input"
+          >
+            1. Describe your task
+          </label>
+          <span className="font-mono text-xs text-muted" id="task-counter">
+            {task.length}/{MAX_TASK_LENGTH}
+          </span>
+        </div>
+        <Textarea
+          aria-describedby="task-counter"
+          id="task-input"
+          maxLength={MAX_TASK_LENGTH}
+          onChange={(event) => {
+            setTask(event.target.value);
+            setError("");
+            setApiError("");
+          }}
+          placeholder="Describe what you need an LLM to do..."
+          value={task}
+        />
       </div>
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
-      <div className="border-t border-border pt-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+
+      <div className="mt-5 border-t border-border pt-5">
+        <p className="font-mono text-sm font-semibold uppercase text-primary">
+          2. Preferences
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {PREFERENCE_CONTROLS.map((control) => (
             <label
-              className="flex min-h-10 cursor-pointer items-center gap-2 border border-border bg-surface px-3 py-2 text-sm text-secondary"
+              className="flex min-h-10 cursor-pointer items-center gap-2 rounded-[6px] border border-border bg-soft px-3 py-2 text-sm text-secondary transition hover:border-border-strong hover:bg-raised"
               key={control.key}
             >
               <input
                 checked={Boolean(preferences[control.key])}
+                className={checkboxClassName}
                 onChange={(event) =>
                   updatePreference(control.key, event.target.checked)
                 }
@@ -237,10 +244,12 @@ export function TaskInput() {
           ))}
         </div>
       </div>
-      <div className="border-t border-border pt-4">
+
+      <div className="mt-5 border-t border-border pt-5">
         <label className="flex cursor-pointer items-center gap-3 text-sm text-secondary">
           <input
             checked={compareSpecific}
+            className={checkboxClassName}
             onChange={(event) => {
               const checked = event.target.checked;
 
@@ -262,13 +271,41 @@ export function TaskInput() {
                 selectedModels={selectedModels}
               />
             ) : (
-              <div className="border border-border bg-surface p-4 text-sm text-secondary">
+              <div className="rounded-[6px] border border-border bg-soft p-4 text-sm text-secondary">
                 Run a recommendation once to populate model choices, then return
                 here to select specific models.
               </div>
             )}
           </div>
         ) : null}
+      </div>
+
+      <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm leading-6 text-secondary">
+          Recommendations use weighted benchmark signals and preserve evidence
+          gaps.
+        </p>
+        <Button className="w-full sm:w-auto" disabled={isLoading} onClick={handleSubmit}>
+          {isLoading ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="h-3 w-3 animate-spin rounded-full border border-black border-t-transparent" />
+              Analyzing your task...
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              {compareSpecific ? "Compare Selected Models" : "Find Best Models"}
+              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 20 20">
+                <path
+                  d="M4 10h11M11 6l4 4-4 4"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.7"
+                />
+              </svg>
+            </span>
+          )}
+        </Button>
       </div>
     </div>
   );

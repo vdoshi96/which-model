@@ -3,15 +3,35 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0a0a0a;
-  --surface: #141414;
-  --border: #262626;
-  --text-primary: #f5f5f5;
-  --text-secondary: #888888;
-  --accent: #e5ff47;
-  --green: #4ade80;
-  --yellow: #fbbf24;
-  --red: #f87171;
+  --bg: #050607;
+  --surface: #111417;
+  --surface-raised: #171b1f;
+  --surface-soft: #0c0f12;
+  --border: #2a3036;
+  --border-strong: #3a424a;
+  --text-primary: #f6f8fb;
+  --text-secondary: #a3adb8;
+  --text-muted: #69737e;
+  --accent: #c8ff26;
+  --cyan: #5ce1d8;
+  --green: #68e18c;
+  --yellow: #ffb84d;
+  --red: #ff7474;
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.42);
+  --color-bg: 5 6 7;
+  --color-surface: 17 20 23;
+  --color-surface-raised: 23 27 31;
+  --color-surface-soft: 12 15 18;
+  --color-border: 42 48 54;
+  --color-border-strong: 58 66 74;
+  --color-text-primary: 246 248 251;
+  --color-text-secondary: 163 173 184;
+  --color-text-muted: 105 115 126;
+  --color-accent: 200 255 38;
+  --color-cyan: 92 225 216;
+  --color-green: 104 225 140;
+  --color-yellow: 255 184 77;
+  --color-red: 255 116 116;
 }
 
 * {
@@ -24,7 +44,9 @@ body {
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 18% -10%, rgba(92, 225, 216, 0.09), transparent 34rem),
+    linear-gradient(180deg, rgba(17, 20, 23, 0.92), var(--bg) 22rem);
   color: var(--text-primary);
 }
 
@@ -36,4 +58,26 @@ a {
 ::selection {
   background: var(--accent);
   color: var(--bg);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

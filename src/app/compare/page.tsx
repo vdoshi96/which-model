@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { DimensionWeights } from "@/components/DimensionWeights";
+import { ComparisonTable } from "@/components/ComparisonTable";
 import { ModelSelector } from "@/components/ModelSelector";
 import { RankingList } from "@/components/RankingList";
 import { Button } from "@/components/ui/Button";
@@ -292,28 +293,32 @@ function ComparePageContent() {
 
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-          Comparison
-        </p>
-        <h1 className="font-mono text-3xl font-semibold sm:text-4xl">
-          Compare models
-        </h1>
-        <p className="max-w-2xl text-secondary">
-          Pick two or more anchor models. The comparison fills open slots with
-          curated recommendations for this task.
-        </p>
+      <div className="rounded-[8px] border border-border bg-surface p-5 shadow-[var(--shadow-soft)] sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              Compare models
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-secondary">
+              Pick two or more anchor models. The comparison fills open slots
+              with curated recommendations for this task.
+            </p>
+          </div>
+          <div className="rounded-[6px] border border-border bg-soft px-3 py-2 font-mono text-xs uppercase text-muted">
+            Comparison
+          </div>
+        </div>
       </div>
 
       {error ? (
-        <div className="border border-danger bg-surface p-4 text-sm text-danger">
+        <div className="rounded-[8px] border border-danger/70 bg-danger/10 p-4 text-sm text-danger">
           {error}
         </div>
       ) : null}
 
-      <div className="space-y-3 border border-border bg-surface p-4">
+      <div className="space-y-3 rounded-[8px] border border-border bg-surface p-4">
         <label className="block space-y-2">
-          <span className="font-mono text-sm text-secondary">
+          <span className="font-mono text-sm font-semibold uppercase text-primary">
             Task description
           </span>
           <Textarea
@@ -330,7 +335,7 @@ function ComparePageContent() {
           <span>{task.length}/500</span>
           {recommendationStatus === "Loading" ? (
             <span className="inline-flex items-center gap-2">
-              <span className="h-3 w-3 animate-spin border border-accent border-t-transparent" />
+              <span className="h-3 w-3 animate-spin rounded-full border border-accent border-t-transparent" />
               Loading top recommendations...
             </span>
           ) : null}
@@ -338,7 +343,7 @@ function ComparePageContent() {
       </div>
 
       <div
-        className="sticky top-16 z-20 flex flex-col gap-2 border border-border bg-bg/95 p-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+        className="sticky top-20 z-20 flex flex-col gap-2 rounded-[8px] border border-border-strong bg-bg/95 p-3 shadow-[var(--shadow-soft)] backdrop-blur sm:flex-row sm:items-center sm:justify-between"
         data-testid="compare-command-bar"
       >
         <p className="min-w-0 truncate text-sm text-secondary">
@@ -353,7 +358,14 @@ function ComparePageContent() {
           disabled={!canCompare || selectedModels.length > MAX_MODELS}
           onClick={handleCompare}
         >
-          {comparisonStatus === "Loading" ? "Comparing..." : "Compare Models"}
+          {comparisonStatus === "Loading" ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="h-3 w-3 animate-spin rounded-full border border-black border-t-transparent" />
+              Comparing...
+            </span>
+          ) : (
+            "Compare Models"
+          )}
         </Button>
       </div>
 
@@ -370,19 +382,26 @@ function ComparePageContent() {
 
       {comparison ? (
         <>
-          <div className="border border-border bg-surface p-5">
-            <p className="font-mono text-xs uppercase text-secondary">
-              Task summary
-            </p>
-            <p className="mt-2 text-base leading-7 text-primary">
-              {comparison.taskSummary}
-            </p>
+          <div className="rounded-[8px] border border-border bg-surface p-5">
+            <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
+              <p className="font-mono text-xs uppercase text-secondary">
+                Your task
+              </p>
+              <p className="text-base leading-7 text-primary">
+                {comparison.taskSummary}
+              </p>
+            </div>
           </div>
 
           <DimensionWeights dimensions={comparison.dimensions} />
 
+          <ComparisonTable
+            dimensions={comparison.dimensions}
+            models={comparison.models}
+          />
+
           <div>
-            <h2 className="font-mono text-xl font-semibold">Top 5 ranking</h2>
+            <h2 className="text-xl font-semibold">Top 5 ranking</h2>
             <p className="mt-1 text-sm text-secondary">
               Your selected models stay in the shortlist; remaining slots are
               filled by the same curated ranking used for normal recommendations.

@@ -85,7 +85,7 @@ function uniqueEvidenceGaps(models: ComparedModel[]) {
 export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
   if (models.length === 0) {
     return (
-      <div className="border border-border bg-surface p-6 text-secondary">
+      <div className="rounded-[8px] border border-border bg-surface p-6 text-secondary">
         Comparison results will appear here after you compare two or more models.
       </div>
     );
@@ -96,12 +96,18 @@ export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
   const evidenceGaps = uniqueEvidenceGaps(models);
 
   return (
-    <div className="border border-border bg-surface">
+    <div className="overflow-hidden rounded-[8px] border border-border bg-surface shadow-[var(--shadow-soft)]">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <h2 className="text-base font-semibold text-primary">Compare models</h2>
+        <span className="font-mono text-[11px] uppercase text-muted">
+          Top 5 ranking
+        </span>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] table-fixed border-collapse text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 w-40 border-b border-border bg-surface p-3 text-left sm:w-52">
+              <th className="sticky left-0 z-10 w-40 border-b border-border bg-surface p-3 text-left font-mono text-xs uppercase text-secondary sm:w-52">
                 Metric
               </th>
               {models.map((model) => (
@@ -123,13 +129,13 @@ export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
             </tr>
           </thead>
           <tbody>
-            <tr className="bg-bg">
-              <td className="sticky left-0 z-10 border-b border-border bg-bg p-3 font-medium">
+            <tr className="bg-soft">
+              <td className="sticky left-0 z-10 border-b border-border bg-soft p-3 font-medium">
                 Weighted overall score
               </td>
               {models.map((model) => (
                 <td
-                  className="border-b border-border p-3 font-mono text-lg font-semibold text-accent"
+                  className="border-b border-border p-3 font-mono text-lg font-semibold text-cyan"
                   key={model.name}
                 >
                   {model.weightedScore.toFixed(1)}
@@ -180,7 +186,7 @@ export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
         </table>
       </div>
       {evidenceGaps.length > 0 ? (
-        <div className="border-t border-border bg-bg p-3 text-xs text-secondary">
+        <div className="border-t border-border bg-soft p-3 text-xs text-secondary">
           <div className="font-mono uppercase">Evidence gaps</div>
           <p className="mt-1">
             Not an N/A placeholder: these notes show where curated benchmark
@@ -188,7 +194,7 @@ export function ComparisonTable({ dimensions, models }: ComparisonTableProps) {
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {evidenceGaps.map((gap) => (
-              <span className="border border-border px-2 py-1" key={gap}>
+              <span className="rounded-[5px] border border-border bg-surface px-2 py-1" key={gap}>
                 {gap}
               </span>
             ))}

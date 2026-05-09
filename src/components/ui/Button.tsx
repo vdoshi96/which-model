@@ -17,13 +17,13 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex min-h-10 items-center justify-center border px-4 py-2 font-mono text-sm font-medium leading-5 transition disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex min-h-10 items-center justify-center rounded-[6px] border px-4 py-2 text-sm font-semibold leading-5 transition duration-200 disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" &&
-          "border-accent bg-accent text-black hover:bg-primary",
+          "border-accent bg-accent text-black shadow-[0_0_0_1px_rgba(200,255,38,0.25),0_12px_30px_rgba(200,255,38,0.12)] hover:bg-primary",
         variant === "secondary" &&
-          "border-border bg-surface text-primary hover:border-secondary",
+          "border-border-strong bg-raised text-primary hover:border-secondary hover:bg-surface",
         variant === "ghost" &&
-          "border-transparent bg-transparent text-secondary hover:text-primary",
+          "border-transparent bg-transparent text-secondary hover:bg-raised hover:text-primary",
         className,
       )}
       type={type}

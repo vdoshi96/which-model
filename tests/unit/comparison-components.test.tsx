@@ -154,7 +154,7 @@ describe("ModelSelector", () => {
     expect(selectedOption).toHaveAttribute("aria-checked", "true");
     expect(selectedOption.closest("label")).toHaveClass(
       "min-h-10",
-      "bg-surface",
+      "bg-accent/10",
       "text-accent",
     );
   });
@@ -193,7 +193,7 @@ describe("ComparePage", () => {
     const commandBar = await screen.findByTestId("compare-command-bar");
     const selector = await screen.findByTestId("model-selector");
 
-    expect(commandBar).toHaveClass("sticky", "top-16");
+    expect(commandBar).toHaveClass("sticky", "top-20");
     expect(within(commandBar).getByRole("button", { name: /compare models/i }))
       .toBeInTheDocument();
     expect(commandBar.compareDocumentPosition(selector)).toBe(
@@ -264,13 +264,13 @@ describe("ComparePage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Top 5 ranking")).toBeInTheDocument();
+      expect(screen.getAllByText("Top 5 ranking").length).toBeGreaterThan(0);
     });
     expect(screen.getByText("#1")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Claude 3.5 Sonnet" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Winner")).not.toBeInTheDocument();
+    expect(screen.getByText("Winner")).toBeInTheDocument();
   });
 });
 

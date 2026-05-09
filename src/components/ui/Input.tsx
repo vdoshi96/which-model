@@ -11,7 +11,7 @@ export function Input({
   return (
     <input
       className={cn(
-        "h-11 w-full border border-border bg-surface px-3 text-primary outline-none placeholder:text-secondary focus:border-accent",
+        "h-11 w-full rounded-[6px] border border-border bg-soft px-3 text-sm text-primary outline-none transition placeholder:text-muted focus:border-accent focus:bg-surface",
         className,
       )}
       {...props}
@@ -26,7 +26,7 @@ export function Textarea({
   return (
     <textarea
       className={cn(
-        "min-h-40 w-full resize-none border border-border bg-surface p-4 text-primary outline-none placeholder:text-secondary focus:border-accent",
+        "min-h-40 w-full resize-none rounded-[6px] border border-border bg-soft p-4 text-sm leading-6 text-primary outline-none transition placeholder:text-muted focus:border-accent focus:bg-surface",
         className,
       )}
       {...props}

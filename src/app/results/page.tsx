@@ -148,44 +148,54 @@ function ResultsPageContent() {
 
   return (
     <section className="space-y-6">
-      <div className="space-y-3">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-secondary">
-          Recommendations
-        </p>
-        <h1 className="font-mono text-3xl font-semibold sm:text-4xl">
-          Best models for this task
-        </h1>
+      <div className="rounded-[8px] border border-border bg-surface p-5 shadow-[var(--shadow-soft)] sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              Best models for this task
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-secondary">
+              Scores combine task weights with benchmark evidence, preferences,
+              and available model metadata.
+            </p>
+          </div>
+          <div className="rounded-[6px] border border-border bg-soft px-3 py-2 font-mono text-xs uppercase text-muted">
+            Recommendations
+          </div>
+        </div>
       </div>
 
       {status === "Loading" ? (
-        <div className="flex min-h-40 items-center gap-3 border border-border bg-surface p-6 font-mono text-sm text-secondary">
-          <span className="h-4 w-4 animate-spin border border-accent border-t-transparent" />
+        <div className="flex min-h-40 items-center gap-3 rounded-[8px] border border-border bg-surface p-6 font-mono text-sm text-secondary">
+          <span className="h-4 w-4 animate-spin rounded-full border border-accent border-t-transparent" />
           Analyzing your task...
         </div>
       ) : null}
 
       {error ? (
-        <div className="border border-danger bg-surface p-4 text-sm text-danger">
+        <div className="rounded-[8px] border border-danger/70 bg-danger/10 p-4 text-sm text-danger">
           {error}
         </div>
       ) : null}
 
       {result ? (
         <>
-          <div className="border border-border bg-surface p-5">
-            <p className="font-mono text-xs uppercase text-secondary">
-              Task summary
-            </p>
-            <p className="mt-2 text-base leading-7 text-primary">
-              {result.taskSummary}
-            </p>
+          <div className="rounded-[8px] border border-border bg-surface p-5">
+            <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
+              <p className="font-mono text-xs uppercase text-secondary">
+                Your task
+              </p>
+              <p className="text-base leading-7 text-primary">
+                {result.taskSummary}
+              </p>
+            </div>
           </div>
 
           <DimensionWeights dimensions={result.dimensions} />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-[8px] border border-border bg-soft p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-mono text-xl font-semibold">Top 10 ranking</h2>
+              <h2 className="text-xl font-semibold">Top 10 ranking</h2>
               <p className="mt-1 text-sm text-secondary">
                 Ranked by task weights, curated benchmark signals, preferences,
                 and available model metadata. Cost affects ranking only when
@@ -197,7 +207,18 @@ function ResultsPageContent() {
               onClick={handleCompareTopModels}
               variant="secondary"
             >
-              Compare top models
+              <span className="inline-flex items-center gap-2">
+                Compare top models
+                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 20 20">
+                  <path
+                    d="M4 10h11M11 6l4 4-4 4"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.7"
+                  />
+                </svg>
+              </span>
             </Button>
           </div>
 

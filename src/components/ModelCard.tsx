@@ -76,27 +76,32 @@ export function ModelCard({ recommendation }: ModelCardProps) {
     : "";
 
   return (
-    <Card className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <Card className="space-y-4 p-0">
+      <div className="grid gap-4 p-4 sm:grid-cols-[3rem_minmax(0,1fr)_8rem] sm:items-center">
+        <div className="grid h-9 w-9 place-items-center rounded-[6px] border border-border bg-soft font-mono text-sm text-accent">
+          #{recommendation.rank}
+        </div>
         <div className="min-w-0">
-          <p className="font-mono text-xs text-secondary">
-            #{recommendation.rank}
-          </p>
-          <h2 className="break-words font-mono text-xl font-semibold leading-tight">
+          <h2 className="break-words text-xl font-semibold leading-tight">
             {recommendation.model.name}
           </h2>
-          <p className="text-sm text-secondary">{recommendation.model.provider}</p>
+          <p className="mt-1 text-sm text-secondary">
+            {recommendation.model.provider}
+          </p>
         </div>
         <div className="shrink-0 sm:text-right">
           <p className="font-mono text-xs uppercase text-secondary">
             Weighted score
           </p>
-          <p className="font-mono text-2xl font-semibold text-accent">
+          <p className="mt-1 font-mono text-3xl font-semibold text-cyan">
             {recommendation.score.toFixed(2)}
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2 border-y border-border bg-soft/60 px-4 py-3">
+        <p className="mr-1 font-mono text-xs text-secondary">
+          {formatSignalCount(signalCount)}
+        </p>
         {recommendation.benchmarksUsed.slice(0, 3).map((benchmark) => (
           <BenchmarkBadge
             key={`${benchmark.source}-${benchmark.dimension}`}
@@ -105,11 +110,8 @@ export function ModelCard({ recommendation }: ModelCardProps) {
           />
         ))}
       </div>
-      <p className="font-mono text-xs text-secondary">
-        {formatSignalCount(signalCount)}
-      </p>
       {topContributions.length > 0 ? (
-        <div className="space-y-2 border-t border-border pt-4">
+        <div className="space-y-2 px-4">
           <p className="font-mono text-xs uppercase text-secondary">
             Top contributions
           </p>
@@ -134,21 +136,21 @@ export function ModelCard({ recommendation }: ModelCardProps) {
         </div>
       ) : null}
       {missingEvidence.length > 0 || unavailableEvidence.length > 0 ? (
-        <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+        <div className="flex flex-wrap gap-2 border-t border-border px-4 pt-4">
           {missingEvidence.length > 0 ? (
-            <span className="inline-flex min-h-7 items-center border border-warning px-2 py-1 font-mono text-xs text-warning">
+            <span className="inline-flex min-h-7 items-center rounded-[5px] border border-warning/70 bg-warning/10 px-2 py-1 font-mono text-xs text-warning">
               Missing: {formatEvidenceList(missingEvidence)}
             </span>
           ) : null}
           {unavailableEvidence.length > 0 ? (
-            <span className="inline-flex min-h-7 items-center border border-border px-2 py-1 font-mono text-xs text-secondary">
+            <span className="inline-flex min-h-7 items-center rounded-[5px] border border-border bg-soft px-2 py-1 font-mono text-xs text-secondary">
               Unavailable: {formatEvidenceList(unavailableEvidence)}
             </span>
           ) : null}
         </div>
       ) : null}
       {recommendation.rationale || provenanceSummary ? (
-        <div className="space-y-2 border-t border-border pt-4 text-sm">
+        <div className="space-y-2 border-t border-border px-4 pt-4 text-sm">
           {provenanceSummary ? (
             <p className="font-mono text-xs text-secondary">
               <span className="uppercase">Provenance</span>{" "}
@@ -160,8 +162,8 @@ export function ModelCard({ recommendation }: ModelCardProps) {
           ) : null}
         </div>
       ) : null}
-      <div className="grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
-        <div>
+      <div className="grid gap-3 border-t border-border p-4 text-sm sm:grid-cols-2">
+        <div className="rounded-[6px] border border-border bg-soft p-3">
           <p className="font-mono text-xs uppercase text-secondary">
             Cost / 1M tokens
           </p>
@@ -172,7 +174,7 @@ export function ModelCard({ recommendation }: ModelCardProps) {
             )}
           </p>
         </div>
-        <div>
+        <div className="rounded-[6px] border border-border bg-soft p-3">
           <p className="font-mono text-xs uppercase text-secondary">
             Context window
           </p>

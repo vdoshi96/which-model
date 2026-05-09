@@ -391,13 +391,16 @@ describe("ResultsPage", () => {
 });
 
 describe("SplashScreen", () => {
-  it("explains username/password signup and shows mock test-run artifacts", () => {
+  it("presents the redesigned product entry screen and signup path", () => {
     render(<SplashScreen />);
 
     expect(screen.getByText(/No email required/i)).toBeInTheDocument();
-    expect(screen.getByText(/username and password/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Mock test run/i)).toHaveLength(2);
-    expect(screen.getByText(/Legal reasoning summary/i)).toBeInTheDocument();
-    expect(screen.getByText(/Coding agent comparison/i)).toBeInTheDocument();
+    expect(screen.getByText(/Choose the right LLM/i)).toBeInTheDocument();
+    expect(screen.getByText("Evidence first")).toBeInTheDocument();
+    expect(screen.getByText("Try it now")).toBeInTheDocument();
+    expect(screen.getByText("Evidence preview")).toBeInTheDocument();
+    expect(screen.getByText("Ranked shortlist")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Find Best Models/i }))
+      .toHaveAttribute("href", "/auth/signup");
   });
 });

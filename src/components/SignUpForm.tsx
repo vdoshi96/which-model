@@ -80,16 +80,16 @@ export function SignUpForm() {
   }
 
   return (
-    <section className="mx-auto flex min-h-[70vh] max-w-md items-center px-1">
-      <Card className="w-full space-y-5">
+    <section className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center px-1">
+      <Card className="w-full space-y-5 border-border-strong bg-raised">
         <div className="space-y-2">
-          <h1 className="font-mono text-2xl font-semibold">Sign up</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Sign up</h1>
           <p className="text-sm text-secondary">
             Create a username-only account. No email required.
           </p>
         </div>
         {apiError ? (
-          <div className="border border-danger p-3 text-sm text-danger">
+          <div className="rounded-[6px] border border-danger/70 bg-danger/10 p-3 text-sm text-danger">
             {apiError}
           </div>
         ) : null}

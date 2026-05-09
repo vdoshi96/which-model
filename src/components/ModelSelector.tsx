@@ -51,7 +51,7 @@ export function ModelSelector({
 
   return (
     <div
-      className="space-y-3 border border-border bg-surface p-3 sm:p-4"
+      className="space-y-3 rounded-[8px] border border-border bg-surface p-3 sm:p-4"
       data-testid="model-selector"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -65,20 +65,20 @@ export function ModelSelector({
             value={query}
           />
         </label>
-        <div className="font-mono text-xs text-secondary">
+        <div className="rounded-[5px] border border-border bg-soft px-2.5 py-2 font-mono text-xs text-secondary">
           {selectedModels.length} of {maxModels} selected
         </div>
       </div>
 
       <div
-        className="flex min-h-10 flex-wrap items-center gap-1.5 border border-border bg-bg p-1.5"
+        className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-[6px] border border-border bg-soft p-1.5"
         data-testid="selected-models-strip"
       >
         {selectedModels.length > 0 ? (
           selectedModels.map((model) => (
             <button
               aria-label={`Remove ${model}`}
-              className="inline-flex h-7 max-w-48 items-center gap-1.5 truncate border border-accent/70 bg-surface px-2 text-left font-mono text-xs text-primary transition hover:border-accent focus:border-accent focus:outline-none"
+              className="inline-flex h-7 max-w-48 items-center gap-1.5 truncate rounded-[5px] border border-accent/70 bg-accent/10 px-2 text-left font-mono text-xs text-primary transition hover:border-accent focus:border-accent focus:outline-none"
               data-testid="selected-model-chip"
               key={model}
               onClick={() => toggleModel(model)}
@@ -109,7 +109,7 @@ export function ModelSelector({
       ) : null}
 
       <ul
-        className="max-h-72 divide-y divide-border overflow-y-auto border border-border bg-bg"
+        className="max-h-72 divide-y divide-border overflow-y-auto rounded-[6px] border border-border bg-soft"
         data-testid="model-options-list"
       >
         {filteredModels.length > 0 ? (
@@ -124,15 +124,15 @@ export function ModelSelector({
                     "flex min-h-10 items-center gap-2 px-3 py-1.5 text-sm transition",
                     disabled
                       ? "cursor-not-allowed opacity-50"
-                      : "cursor-pointer hover:bg-surface",
-                    checked && "bg-surface text-accent",
+                      : "cursor-pointer hover:bg-raised",
+                    checked && "bg-accent/10 text-accent",
                   )}
                 >
                   <input
                     aria-checked={checked}
                     aria-label={model}
                     checked={checked}
-                    className="h-4 w-4"
+                    className="h-4 w-4 accent-accent"
                     disabled={disabled}
                     onChange={() => toggleModel(model)}
                     type="checkbox"

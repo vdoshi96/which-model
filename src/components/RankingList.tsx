@@ -9,7 +9,7 @@ interface RankingListProps {
 export function RankingList({ recommendations }: RankingListProps) {
   if (recommendations.length === 0) {
     return (
-      <div className="border border-border bg-surface p-6 text-secondary">
+      <div className="rounded-[8px] border border-border bg-surface p-6 text-secondary">
         Recommendations will appear here after you analyze a task.
       </div>
     );
