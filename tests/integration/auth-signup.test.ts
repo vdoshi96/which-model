@@ -1,6 +1,9 @@
 export {};
 
 const mockHash = jest.fn();
+const mockAssertRateLimit = jest.fn();
+const mockGetClientIp = jest.fn();
+const mockBuildSignupRateLimitKey = jest.fn();
 const mockUserFindUnique = jest.fn();
 const mockUserCreate = jest.fn();
 
@@ -20,10 +23,22 @@ jest.mock("@/lib/db", () => ({
   })),
 }));
 
+jest.mock("@/lib/rateLimit", () => ({
+  assertRateLimit: mockAssertRateLimit,
+  buildSignupRateLimitKey: mockBuildSignupRateLimitKey,
+  getClientIp: mockGetClientIp,
+  RateLimitError: class RateLimitError extends Error {},
+}));
+
 describe("signup API route", () => {
   beforeEach(() => {
     jest.resetModules();
     mockHash.mockReset().mockResolvedValue("hashed-password");
+    mockAssertRateLimit.mockReset().mockResolvedValue(undefined);
+    mockGetClientIp.mockReset().mockReturnValue("203.0.113.10");
+    mockBuildSignupRateLimitKey
+      .mockReset()
+      .mockImplementation((ipAddress: string) => `signup:ip:${ipAddress}`);
     mockUserFindUnique.mockReset().mockResolvedValue(null);
     mockUserCreate.mockReset().mockResolvedValue({ id: "user_1" });
   });
@@ -40,6 +55,9 @@ describe("signup API route", () => {
 
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ ok: true });
+    expect(mockAssertRateLimit).toHaveBeenCalledWith(
+      "signup:ip:203.0.113.10",
+    );
     expect(mockUserFindUnique).toHaveBeenCalledWith({
       where: { username: "valid_user1" },
     });
@@ -68,6 +86,30 @@ describe("signup API route", () => {
     expect(await response.json()).toEqual({
       error: "Username is already taken.",
     });
+    expect(mockUserCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects signup requests when the signup rate limit is exhausted", async () => {
+    const { RateLimitError } = await import("@/lib/rateLimit");
+
+    mockAssertRateLimit.mockRejectedValue(
+      new RateLimitError("Rate limit exceeded. Try again later."),
+    );
+    const { POST } = await import("@/app/api/auth/signup/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({ username: "valid_user1", password: "password1" }),
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({
+      error: "Rate limit exceeded. Try again later.",
+    });
+    expect(mockUserFindUnique).not.toHaveBeenCalled();
+    expect(mockHash).not.toHaveBeenCalled();
     expect(mockUserCreate).not.toHaveBeenCalled();
   });
 

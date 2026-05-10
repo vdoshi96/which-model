@@ -2,6 +2,7 @@ export {};
 
 const mockCompare = jest.fn();
 const mockUserFindUnique = jest.fn();
+const originalAdminPassword = process.env.ADMIN_PASSWORD;
 
 jest.mock("bcryptjs", () => ({
   __esModule: true,
@@ -36,8 +37,17 @@ jest.mock("@/lib/db", () => ({
 describe("built-in admin auth", () => {
   beforeEach(() => {
     jest.resetModules();
+    process.env.ADMIN_PASSWORD = "test-admin-password1";
     mockCompare.mockReset();
     mockUserFindUnique.mockReset();
+  });
+
+  afterAll(() => {
+    if (originalAdminPassword === undefined) {
+      delete process.env.ADMIN_PASSWORD;
+    } else {
+      process.env.ADMIN_PASSWORD = originalAdminPassword;
+    }
   });
 
   it("authorizes the built-in admin without requiring a database user", async () => {
@@ -45,7 +55,7 @@ describe("built-in admin auth", () => {
 
     const user = await authorizeCredentials({
       username: "admin",
-      password: "Codex123!",
+      password: "test-admin-password1",
     });
 
     expect(user).toEqual({
@@ -54,6 +64,20 @@ describe("built-in admin auth", () => {
       name: "admin",
       username: "admin",
     });
+    expect(mockUserFindUnique).not.toHaveBeenCalled();
+    expect(mockCompare).not.toHaveBeenCalled();
+  });
+
+  it("does not authorize the admin when ADMIN_PASSWORD is unset", async () => {
+    delete process.env.ADMIN_PASSWORD;
+    const { authorizeCredentials } = await import("@/lib/auth");
+
+    const user = await authorizeCredentials({
+      username: "admin",
+      password: "Codex123!",
+    });
+
+    expect(user).toBeNull();
     expect(mockUserFindUnique).not.toHaveBeenCalled();
     expect(mockCompare).not.toHaveBeenCalled();
   });

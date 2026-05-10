@@ -20,6 +20,10 @@ export function buildRateLimitKey(userId: string, ipAddress: string): string {
   return `user:${userId}:ip:${ipAddress}`;
 }
 
+export function buildSignupRateLimitKey(ipAddress: string): string {
+  return `signup:ip:${ipAddress}`;
+}
+
 export function getRateLimiter(): Ratelimit {
   if (!limiter) {
     limiter = new Ratelimit({
@@ -32,8 +36,8 @@ export function getRateLimiter(): Ratelimit {
   return limiter;
 }
 
-export async function assertRateLimit(ipAddress: string): Promise<void> {
-  const result = await getRateLimiter().limit(ipAddress);
+export async function assertRateLimit(key: string): Promise<void> {
+  const result = await getRateLimiter().limit(key);
 
   if (!result.success) {
     throw new RateLimitError();

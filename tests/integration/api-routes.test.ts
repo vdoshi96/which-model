@@ -31,6 +31,30 @@ jest.mock("@/lib/db", () => ({
   })),
 }));
 
+jest.mock("@/lib/queryAudit", () => ({
+  buildQueryLogData: jest.fn(
+    ({
+      task,
+      ipAddress,
+      result,
+      userId,
+    }: {
+      task: string;
+      ipAddress: string;
+      result: { recommendations?: unknown[]; models?: unknown[] };
+      userId?: string;
+    }) => ({
+      taskHash: `task-hash:${task.length}`,
+      ipHash: `ip-hash:${ipAddress}`,
+      userId,
+      expiresAt: new Date("2026-06-09T00:00:00.000Z"),
+      resultJson: {
+        resultCount: result.recommendations?.length ?? result.models?.length ?? 0,
+      },
+    }),
+  ),
+}));
+
 describe("recommend and compare API routes", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -123,9 +147,15 @@ describe("recommend and compare API routes", () => {
     expect(mockLimit).toHaveBeenCalledWith("user:user_1:ip:203.0.113.10");
     expect(mockQueryCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        taskText: "Pick a model for legal reasoning.",
-        ipAddress: "203.0.113.10",
+        ipHash: "ip-hash:203.0.113.10",
+        taskHash: "task-hash:33",
         userId: "user_1",
+      }),
+    });
+    expect(mockQueryCreate).not.toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        taskText: expect.any(String),
+        ipAddress: expect.any(String),
       }),
     });
   });
@@ -667,8 +697,8 @@ describe("recommend and compare API routes", () => {
     expect(mockLimit).toHaveBeenCalledWith("user:user_1:ip:203.0.113.10");
     expect(mockQueryCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        ipAddress: "203.0.113.10",
-        taskText: "Pick a reasoning model.",
+        ipHash: "ip-hash:203.0.113.10",
+        taskHash: "task-hash:23",
         userId: "user_1",
       }),
     });

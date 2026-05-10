@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const findUnique = vi.fn();
 const create = vi.fn();
+const assertRateLimit = vi.fn();
+const getClientIp = vi.fn();
+const buildSignupRateLimitKey = vi.fn();
 
 vi.mock("../../src/lib/db", () => ({
   getPrisma: () => ({
@@ -12,10 +15,22 @@ vi.mock("../../src/lib/db", () => ({
   }),
 }));
 
+vi.mock("../../src/lib/rateLimit", () => ({
+  assertRateLimit,
+  buildSignupRateLimitKey,
+  getClientIp,
+  RateLimitError: class RateLimitError extends Error {},
+}));
+
 describe("POST /api/auth/signup", () => {
   beforeEach(() => {
     findUnique.mockReset();
     create.mockReset();
+    assertRateLimit.mockReset().mockResolvedValue(undefined);
+    getClientIp.mockReset().mockReturnValue("203.0.113.10");
+    buildSignupRateLimitKey
+      .mockReset()
+      .mockImplementation((ipAddress: string) => `signup:ip:${ipAddress}`);
     vi.resetModules();
   });
 
@@ -39,6 +54,7 @@ describe("POST /api/auth/signup", () => {
     );
 
     expect(response.status).toBe(201);
+    expect(assertRateLimit).toHaveBeenCalledWith("signup:ip:203.0.113.10");
     expect(findUnique).toHaveBeenCalledWith({
       where: { username: "valid_user" },
     });

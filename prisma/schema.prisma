@@ -19,10 +19,220 @@ model Query {
   id         String   @id @default(cuid())
   userId     String?
   user       User?    @relation(fields: [userId], references: [id])
-  taskText   String
-  ipAddress  String
-  resultJson Json
+  taskHash   String
+  ipHash     String
+  resultJson Json?
+  expiresAt  DateTime
   createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model Source {
+  id                   String                @id
+  label                String
+  type                 String
+  authority            String
+  homepageUrl          String?
+  refreshCadence       String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  snapshots            SourceSnapshot[]
+  modelAliases         ModelAlias[]
+  modelOffers          ModelOffer[]
+  benchmarkDefinitions BenchmarkDefinition[]
+  scoreObservations    ScoreObservation[]
+  usageExamples        UsageExample[]
+  editorialOverrides   EditorialOverride[]
+}
+
+model SourceSnapshot {
+  id                String             @id @default(cuid())
+  sourceId          String
+  source            Source             @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  url               String
+  fetchedAt         DateTime           @default(now())
+  observedAt        DateTime?
+  parserVersion     String
+  checksum          String
+  etag              String?
+  lastModified      String?
+  contentType       String?
+  bodyText          String?            @db.Text
+  bodyJson          Json?
+  fetchHeaders      Json?
+  benchmarkRuns     BenchmarkRun[]
+  scoreObservations ScoreObservation[]
+  usageExamples     UsageExample[]
+
+  @@unique([sourceId, checksum])
+  @@index([sourceId, fetchedAt])
+}
+
+model ModelIdentity {
+  id                 String              @id
+  providerNamespace  String
+  slug               String
+  displayName        String
+  family             String?
+  status             String              @default("active")
+  modelType          String              @default("base_model")
+  modalities         String[]            @default([])
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  aliases            ModelAlias[]
+  offers             ModelOffer[]
+  scoreObservations  ScoreObservation[]
+  usageExamples      UsageExample[]
+  editorialOverrides EditorialOverride[]
+
+  @@unique([providerNamespace, slug])
+  @@index([providerNamespace])
+}
+
+model ModelAlias {
+  id              String        @id @default(cuid())
+  modelIdentityId String
+  modelIdentity   ModelIdentity @relation(fields: [modelIdentityId], references: [id], onDelete: Cascade)
+  alias           String
+  namespace       String
+  sourceId        String?
+  source          Source?       @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  observedAt      DateTime      @default(now())
+
+  @@unique([namespace, alias])
+  @@index([modelIdentityId])
+}
+
+model ModelOffer {
+  id              String        @id @default(cuid())
+  modelIdentityId String
+  modelIdentity   ModelIdentity @relation(fields: [modelIdentityId], references: [id], onDelete: Cascade)
+  provider        String
+  apiId           String?
+  hostedBy        String?
+  contextWindow   Int?
+  maxOutputTokens Int?
+  costInputPer1M  Float?
+  costOutputPer1M Float?
+  currency        String        @default("USD")
+  sourceId        String?
+  source          Source?       @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  observedAt      DateTime      @default(now())
+  validFrom       DateTime?
+  validUntil      DateTime?
+
+  @@index([modelIdentityId])
+  @@index([provider, apiId])
+}
+
+model BenchmarkDefinition {
+  id                 String              @id
+  sourceId           String?
+  source             Source?             @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  label              String
+  category           String
+  scope              String              @default("base_model")
+  metricKind         String
+  scale              String?
+  higherIsBetter     Boolean             @default(true)
+  description        String?             @db.Text
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  runs               BenchmarkRun[]
+  scoreObservations  ScoreObservation[]
+  editorialOverrides EditorialOverride[]
+
+  @@index([category, scope])
+}
+
+model BenchmarkRun {
+  id                  String              @id @default(cuid())
+  benchmarkId         String
+  benchmark           BenchmarkDefinition @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
+  sourceSnapshotId    String?
+  sourceSnapshot      SourceSnapshot?     @relation(fields: [sourceSnapshotId], references: [id], onDelete: SetNull)
+  version             String
+  runLabel            String?
+  observedAt          DateTime
+  normalizedWithinRun Boolean             @default(true)
+  scoreObservations   ScoreObservation[]
+
+  @@unique([benchmarkId, version])
+  @@index([sourceSnapshotId])
+}
+
+model ScoreObservation {
+  id               String              @id @default(cuid())
+  modelIdentityId  String
+  modelIdentity    ModelIdentity       @relation(fields: [modelIdentityId], references: [id], onDelete: Cascade)
+  benchmarkId      String
+  benchmark        BenchmarkDefinition @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
+  benchmarkRunId   String?
+  benchmarkRun     BenchmarkRun?       @relation(fields: [benchmarkRunId], references: [id], onDelete: SetNull)
+  sourceId         String
+  source           Source              @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  sourceSnapshotId String?
+  sourceSnapshot   SourceSnapshot?     @relation(fields: [sourceSnapshotId], references: [id], onDelete: SetNull)
+  rawScore         Float?
+  rawLabel         String?
+  normalizedScore  Float?
+  metricUnit       String?
+  provenance       String
+  confidence       Float               @default(1)
+  conflictSetId    String?
+  notes            String?             @db.Text
+  observedAt       DateTime
+  createdAt        DateTime            @default(now())
+
+  @@index([modelIdentityId, benchmarkId])
+  @@index([benchmarkRunId])
+  @@index([sourceId, observedAt])
+  @@index([conflictSetId])
+}
+
+model UsageExample {
+  id               String          @id @default(cuid())
+  modelIdentityId  String
+  modelIdentity    ModelIdentity   @relation(fields: [modelIdentityId], references: [id], onDelete: Cascade)
+  sourceId         String
+  source           Source          @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  sourceSnapshotId String?
+  sourceSnapshot   SourceSnapshot? @relation(fields: [sourceSnapshotId], references: [id], onDelete: SetNull)
+  title            String
+  taskType         String
+  language         String?
+  docUrl           String
+  codeSnippetRef   String?
+  qualityScore     Float?
+  lastVerified     DateTime?
+  createdAt        DateTime        @default(now())
+
+  @@index([modelIdentityId, taskType])
+  @@index([sourceId])
+}
+
+model EditorialOverride {
+  id              String               @id @default(cuid())
+  modelIdentityId String?
+  modelIdentity   ModelIdentity?       @relation(fields: [modelIdentityId], references: [id], onDelete: Cascade)
+  benchmarkId     String?
+  benchmark       BenchmarkDefinition? @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
+  sourceId        String?
+  source          Source?              @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  fieldPath       String
+  overrideJson    Json
+  reason          String               @db.Text
+  status          String               @default("active")
+  createdBy       String?
+  expiresAt       DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([modelIdentityId])
+  @@index([benchmarkId])
+  @@index([status])
 }
 
 model Model {

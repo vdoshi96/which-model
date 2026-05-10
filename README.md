@@ -54,12 +54,17 @@ Only `.env.example` is committed. Never commit `.env` or `.env.local`.
 DATABASE_URL=
 NEXTAUTH_SECRET=
 NEXTAUTH_URL=
+ADMIN_PASSWORD=
 DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 CRON_SECRET=
+QUERY_LOG_SALT=
+QUERY_LOG_RETENTION_DAYS=30
 ```
+
+`ADMIN_PASSWORD` must be explicitly set to enable the built-in `admin` account; there is no fallback password. Query audit logs store task/IP hashes and compact result metadata, with `QUERY_LOG_RETENTION_DAYS` controlling the retention window.
 
 ## Recommendation Data
 

@@ -46,6 +46,14 @@ describe("rate limiting", () => {
     );
   });
 
+  it("builds a signup-specific IP rate limit key", async () => {
+    const { buildSignupRateLimitKey } = await import("@/lib/rateLimit");
+
+    expect(buildSignupRateLimitKey("203.0.113.10")).toBe(
+      "signup:ip:203.0.113.10",
+    );
+  });
+
   it("throws the public rate limit error when Upstash denies the IP", async () => {
     mockLimit.mockResolvedValue({ success: false });
     const { assertRateLimit } = await import("@/lib/rateLimit");

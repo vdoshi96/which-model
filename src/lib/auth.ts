@@ -6,7 +6,6 @@ import { getPrisma } from "@/lib/db";
 import { signInSchema } from "@/lib/validators/auth";
 
 const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Codex123!";
 
 type AuthorizedUser = {
   id: string;
@@ -25,7 +24,9 @@ export async function authorizeCredentials(
   }
 
   if (parsed.data.username === ADMIN_USERNAME) {
-    if (parsed.data.password !== ADMIN_PASSWORD) {
+    const adminPassword = getAdminPassword();
+
+    if (!adminPassword || parsed.data.password !== adminPassword) {
       return null;
     }
 
@@ -60,6 +61,12 @@ export async function authorizeCredentials(
     username: user.username,
     isAdmin: false,
   };
+}
+
+function getAdminPassword(): string | null {
+  const password = process.env.ADMIN_PASSWORD?.trim();
+
+  return password ? password : null;
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
