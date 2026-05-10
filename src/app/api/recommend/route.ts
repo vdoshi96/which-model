@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { loadCuratedCatalog } from "@/lib/curatedCatalog/loadCatalog";
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
+import { buildQueryLogData } from "@/lib/queryAudit";
 import {
   assertRateLimit,
   buildRateLimitKey,
@@ -19,15 +20,6 @@ const TEMPORARY_INTERPRETATION_ERROR =
   "Task interpretation is temporarily unavailable. Try again shortly.";
 
 export const runtime = "nodejs";
-
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
-type JsonObject = { [key: string]: JsonValue };
 
 function logRouteError(message: string, ipAddress: string, error: unknown) {
   console.error(message, {
@@ -97,17 +89,13 @@ export async function POST(request: Request) {
   };
 
   await getPrisma().query.create({
-    data: {
-      taskText: parsed.data.task,
+    data: buildQueryLogData({
+      task: parsed.data.task,
       ipAddress,
       userId: session.user.isAdmin ? undefined : session.user.id,
-      resultJson: toJsonValue(response),
-    },
+      result: response,
+    }),
   });
 
   return Response.json(response);
-}
-
-function toJsonValue(value: unknown): JsonObject {
-  return JSON.parse(JSON.stringify(value)) as JsonObject;
 }

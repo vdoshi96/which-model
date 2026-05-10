@@ -7,6 +7,7 @@ import type {
 } from "@/lib/curatedCatalog/schema";
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
+import { buildQueryLogData } from "@/lib/queryAudit";
 import {
   assertRateLimit,
   buildRateLimitKey,
@@ -30,15 +31,6 @@ const TEMPORARY_INTERPRETATION_ERROR =
 const MAX_COMPARE_MODELS = 5;
 
 export const runtime = "nodejs";
-
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
-type JsonObject = { [key: string]: JsonValue };
 
 const COMPARE_DIMENSIONS: ExtendedBenchmarkDimension[] = [
   "reasoning",
@@ -144,12 +136,12 @@ export async function POST(request: Request) {
   };
 
   await getPrisma().query.create({
-    data: {
-      taskText: parsed.data.task,
+    data: buildQueryLogData({
+      task: parsed.data.task,
       ipAddress,
       userId: session.user.isAdmin ? undefined : session.user.id,
-      resultJson: toJsonValue(response),
-    },
+      result: response,
+    }),
   });
 
   return Response.json(response);
@@ -196,10 +188,6 @@ function buildComparisonModels({
     .sort(compareRankedModelsForDisplay)
     .slice(0, MAX_COMPARE_MODELS)
     .map(toComparedModel);
-}
-
-function toJsonValue(value: unknown): JsonObject {
-  return JSON.parse(JSON.stringify(value)) as JsonObject;
 }
 
 function findCuratedModel(models: CuratedCatalogModel[], name: string) {

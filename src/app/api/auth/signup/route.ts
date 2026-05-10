@@ -1,13 +1,38 @@
 import bcrypt from "bcryptjs";
 
 import { getPrisma } from "@/lib/db";
+import {
+  assertRateLimit,
+  buildSignupRateLimitKey,
+  getClientIp,
+  RateLimitError,
+} from "@/lib/rateLimit";
 import { getAuthFieldErrors, signUpSchema } from "@/lib/validators/auth";
 
 export const runtime = "nodejs";
 
 const RESERVED_USERNAMES = new Set(["admin"]);
+const RATE_LIMIT_UNAVAILABLE =
+  "Signup rate limit unavailable. Try again shortly.";
 
 export async function POST(request: Request) {
+  const ipAddress = getClientIp(request);
+
+  try {
+    await assertRateLimit(buildSignupRateLimitKey(ipAddress));
+  } catch (error) {
+    if (error instanceof RateLimitError) {
+      return Response.json({ error: error.message }, { status: 429 });
+    }
+
+    console.error("Signup rate limit check failed.", {
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return Response.json({ error: RATE_LIMIT_UNAVAILABLE }, { status: 503 });
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = signUpSchema.safeParse(body);
 
