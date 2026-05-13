@@ -32,6 +32,7 @@ interface ArtificialAnalysisRow {
   modelName: string;
   provider: string;
   qualityScore?: number;
+  categoryScores?: Partial<Record<NormalizedBenchmarkRecord["dimension"], number[]>>;
   speed?: number;
   cost?: number;
   contextWindow?: number | null;
@@ -69,7 +70,26 @@ export async function fetchArtificialAnalysis(): Promise<
         ...common,
         dimension: "overall",
         score: normalizePercentageScore(row.qualityScore),
-        rawLabel: "Quality Index",
+        rawLabel: "Artificial Analysis Intelligence Index",
+      });
+    }
+
+    for (const [dimension, values] of Object.entries(row.categoryScores ?? {}) as Array<
+      [NormalizedBenchmarkRecord["dimension"], number[]]
+    >) {
+      if (dimension === "overall" && row.qualityScore !== undefined) {
+        continue;
+      }
+
+      if (values.length === 0) {
+        continue;
+      }
+
+      records.push({
+        ...common,
+        dimension,
+        score: averageScores(values),
+        rawLabel: `Artificial Analysis ${dimension.replaceAll("_", " ")}`,
       });
     }
 
@@ -214,6 +234,7 @@ function extractArtificialRows(rows: SourceRow[]): ArtificialAnalysisRow[] {
           "score",
           "index",
         ]),
+        categoryScores: extractEvaluationCategoryScores(evaluations),
         speed: getNumberFromRecords([row], [
           "tokensPerSecond",
           "tokens_per_second",
@@ -247,6 +268,71 @@ function extractArtificialRows(rows: SourceRow[]): ArtificialAnalysisRow[] {
           row.cost !== undefined)
       );
     });
+}
+
+function extractEvaluationCategoryScores(
+  evaluations: SourceRow | undefined,
+): Partial<Record<NormalizedBenchmarkRecord["dimension"], number[]>> | undefined {
+  if (!evaluations) {
+    return undefined;
+  }
+
+  const scores: Partial<Record<NormalizedBenchmarkRecord["dimension"], number[]>> = {};
+
+  addEvaluationScores(scores, "overall", evaluations, [
+    "artificial_analysis_intelligence_index",
+    "intelligence_index",
+  ]);
+  addEvaluationScores(scores, "coding", evaluations, [
+    "artificial_analysis_coding_index",
+    "livecodebench",
+    "live_code_bench",
+    "scicode",
+    "terminal_bench",
+    "terminal_bench_hard",
+  ]);
+  addEvaluationScores(scores, "math", evaluations, [
+    "artificial_analysis_math_index",
+    "math_500",
+    "aime",
+  ]);
+  addEvaluationScores(scores, "reasoning", evaluations, [
+    "gpqa",
+    "gpqa_diamond",
+    "hle",
+    "humanitys_last_exam",
+    "humanity_last_exam",
+    "critpt",
+    "aa_lcr",
+  ]);
+  addEvaluationScores(scores, "instruction_following", evaluations, [
+    "ifbench",
+    "if_bench",
+  ]);
+
+  return Object.keys(scores).length > 0 ? scores : undefined;
+}
+
+function addEvaluationScores(
+  scores: Partial<Record<NormalizedBenchmarkRecord["dimension"], number[]>>,
+  dimension: NormalizedBenchmarkRecord["dimension"],
+  row: SourceRow,
+  keys: string[],
+) {
+  const values = keys
+    .map((key) => getNumber(row, [key]))
+    .filter((value): value is number => value !== undefined)
+    .map(normalizePercentageScore);
+
+  if (values.length > 0) {
+    scores[dimension] = [...(scores[dimension] ?? []), ...values];
+  }
+}
+
+function averageScores(values: number[]) {
+  return normalizePercentageScore(
+    values.reduce((total, value) => total + value, 0) / values.length,
+  );
 }
 
 export function extractArtificialRowsFromHtml(

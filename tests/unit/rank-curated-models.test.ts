@@ -222,4 +222,42 @@ describe("rankCuratedModels", () => {
       }).every((entry) => (entry.model.contextWindow ?? 0) >= 1_000_000),
     ).toBe(true);
   });
+
+  it("treats provider and model filters as a selected-candidate union", () => {
+    const ranked = rankCuratedModels({
+      catalog: loadCuratedCatalog(),
+      intent: {
+        summary: "Coding task over explicitly available models.",
+        weights: {
+          overall: 0.2,
+          creative_writing: 0,
+          instruction_following: 0.2,
+          reasoning: 0.4,
+          coding: 1,
+          math: 0,
+          tool_use: 0,
+          speed: 0,
+          cost_efficiency: 0,
+          long_context: 0,
+        },
+      },
+      preferences: {
+        ...defaultRecommendationPreferences,
+        preferFrontier: false,
+        preferredProviders: ["OpenAI"],
+        preferredModels: ["deepseek-v4-pro"],
+      },
+      limit: 20,
+    });
+
+    expect(ranked.length).toBeGreaterThan(1);
+    expect(ranked.map((entry) => entry.model.name)).toContain("DeepSeek V4 Pro");
+    expect(
+      ranked.every(
+        (entry) =>
+          entry.model.provider === "OpenAI" ||
+          entry.model.name === "DeepSeek V4 Pro",
+      ),
+    ).toBe(true);
+  });
 });

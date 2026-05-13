@@ -258,12 +258,11 @@ describe("TaskInput", () => {
     }) as jest.Mock;
   });
 
-  it("loads catalog models when opening the specific-model selector", async () => {
+  it("loads provider groups and catalog models for the recommendation scope", async () => {
     render(<TaskInput />);
 
-    fireEvent.click(screen.getByLabelText("Compare specific models"));
-
     await waitFor(() => {
+      expect(screen.getByLabelText("All Anthropic models")).toBeInTheDocument();
       expect(screen.getByText("Claude Sonnet 4.6")).toBeInTheDocument();
     });
     expect(global.fetch).toHaveBeenCalledWith("/api/models");
@@ -272,60 +271,33 @@ describe("TaskInput", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("loads model choices from the versioned recommendation cache", async () => {
-    window.sessionStorage.setItem(
-      "which-model:last-recommendation",
-      JSON.stringify({
-        version: 2,
-        task: "write a song",
-        payload: {
-          taskSummary: "Creative writing needs broad quality.",
-          dimensions: {
-            reasoning: 0.2,
-            coding: 0,
-            math: 0,
-            instruction_following: 0.7,
-            overall: 0.9,
-            speed: 0,
-            cost_efficiency: 0,
-          },
-          recommendations: [
-            {
-              rank: 1,
-              model: {
-                name: "GPT-5.5",
-                provider: "OpenAI",
-                contextWindow: 1000000,
-                costInputPer1M: 5,
-                costOutputPer1M: 30,
-              },
-              score: 96,
-              benchmarksUsed: [],
-            },
-          ],
-        },
-      }),
-    );
+  it("tracks individual model selections in the recommendation scope", async () => {
     render(<TaskInput />);
 
-    fireEvent.click(screen.getByLabelText("Compare specific models"));
-
     await waitFor(() => {
-      expect(screen.getByText("GPT-5.5")).toBeInTheDocument();
+      expect(screen.getByLabelText("Claude Sonnet 4.6")).toBeInTheDocument();
     });
+
+    fireEvent.click(screen.getByLabelText("Claude Sonnet 4.6"));
+
+    expect(screen.getByText("1 model")).toBeInTheDocument();
   });
 
   it("submits checklist preferences in the recommendation request", async () => {
     render(<TaskInput />);
 
+    await waitFor(() => {
+      expect(screen.getByLabelText("All Anthropic models")).toBeInTheDocument();
+    });
     fireEvent.change(
       screen.getByPlaceholderText("Describe what you need an LLM to do..."),
       { target: { value: "Write a launch poem for a product." } },
     );
+    fireEvent.click(screen.getByLabelText("All Anthropic models"));
     fireEvent.click(screen.getByLabelText("Cost conscious"));
     fireEvent.click(screen.getByLabelText("Need long context"));
     fireEvent.click(screen.getByLabelText("Low latency"));
-    fireEvent.click(screen.getByRole("button", { name: "Find Best Models" }));
+    fireEvent.click(screen.getByRole("button", { name: "Analyze Selected Models" }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -339,7 +311,7 @@ describe("TaskInput", () => {
               latencySensitive: true,
               needsLongContext: true,
               localOnly: false,
-              preferredProviders: [],
+              preferredProviders: ["Anthropic"],
               preferredModels: [],
               infrastructure: [],
             },

@@ -1,5 +1,4 @@
 import { auth } from "@/lib/auth";
-import { loadCuratedCatalog } from "@/lib/curatedCatalog/loadCatalog";
 import type {
   BenchmarkCategory,
   CuratedCatalog,
@@ -8,6 +7,7 @@ import type {
 import { interpretTask } from "@/lib/deepseek";
 import { getPrisma } from "@/lib/db";
 import { buildQueryLogData } from "@/lib/queryAudit";
+import { loadEffectiveCatalog } from "@/lib/recommendation/effectiveCatalog";
 import {
   assertRateLimit,
   buildRateLimitKey,
@@ -94,7 +94,8 @@ export async function POST(request: Request) {
     return Response.json({ error: interpretation.reason }, { status: 400 });
   }
 
-  const catalog = loadCuratedCatalog();
+  const prisma = getPrisma();
+  const catalog = await loadEffectiveCatalog(prisma);
   const resolvedModels = parsed.data.modelNames.map((modelName) => ({
     catalogModel: findCuratedModel(catalog.models, modelName),
     requestedName: modelName,
@@ -135,14 +136,18 @@ export async function POST(request: Request) {
     models: comparisonModels,
   };
 
-  await getPrisma().query.create({
-    data: buildQueryLogData({
-      task: parsed.data.task,
-      ipAddress,
-      userId: session.user.isAdmin ? undefined : session.user.id,
-      result: response,
-    }),
-  });
+  try {
+    await prisma.query.create({
+      data: buildQueryLogData({
+        task: parsed.data.task,
+        ipAddress,
+        userId: session.user.isAdmin ? undefined : session.user.id,
+        result: response,
+      }),
+    });
+  } catch (error) {
+    logRouteError("Comparison query audit logging failed.", ipAddress, error);
+  }
 
   return Response.json(response);
 }

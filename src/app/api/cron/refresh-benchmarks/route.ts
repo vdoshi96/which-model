@@ -1,13 +1,11 @@
 import { z } from "zod";
 
+import { refreshBenchmarkData } from "@/lib/benchmarkSources";
+import { getPrisma } from "@/lib/db";
+
 export const runtime = "nodejs";
 
 const authHeaderSchema = z.string().startsWith("Bearer ");
-const DISABLED_REFRESH_RESPONSE = {
-  ok: false,
-  error:
-    "Automatic benchmark refresh is disabled. Use the manual curated catalog refresh runbook.",
-};
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -21,7 +19,9 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  return Response.json(DISABLED_REFRESH_RESPONSE, { status: 410 });
+  const result = await refreshBenchmarkData(getPrisma());
+
+  return Response.json({ ok: true, ...result });
 }
 
 export const POST = GET;

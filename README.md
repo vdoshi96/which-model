@@ -1,6 +1,6 @@
 # which-model
 
-`which-model` helps users find the best LLM for a specific task. It combines a source-backed curated JSON catalog, server-side DeepSeek task interpretation, and deterministic weighted scoring to return ranked recommendations and side-by-side comparisons.
+`which-model` helps users choose the best LLM from the models they can actually use. Users select provider groups or individual models, describe the task, and receive three scoped recommendations: best model no holds barred, best balance of quality and cost, and a cheap model that should still do a decent job.
 
 ## Tech Stack
 
@@ -11,7 +11,7 @@
 - Prisma with Neon Postgres
 - Upstash Redis rate limiting
 - DeepSeek through the OpenAI SDK
-- Manual curated catalog refreshes
+- Weekly benchmark refresh cache with curated catalog fallback
 
 ## Local Setup
 
@@ -57,6 +57,7 @@ NEXTAUTH_URL=
 ADMIN_PASSWORD=
 DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=
+ARTIFICIAL_ANALYSIS_API_KEY=
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 CRON_SECRET=
@@ -68,10 +69,15 @@ QUERY_LOG_RETENTION_DAYS=30
 
 ## Recommendation Data
 
-Recommendations use versioned curated JSON files in `src/data/curated/` for model metadata, benchmark definitions, and scoring evidence. DeepSeek interprets the user's task, then the app applies deterministic ranking against the curated catalog so recommendation changes are reviewable and reproducible.
+Recommendations use an effective catalog made from two layers:
 
-Refreshes are manual editorial events. Use `docs/model-catalog/2026-05-04-manual-refresh-runbook.md` to verify official provider pages, benchmark pages, JSON edits, validation commands, and Browser Use UI checks before opening a refresh PR.
+- Versioned curated JSON files in `src/data/curated/` for stable model metadata, benchmark definitions, and editorial priors.
+- Weekly refreshed benchmark rows in Postgres, populated by `/api/cron/refresh-benchmarks`, including Artificial Analysis API data when `ARTIFICIAL_ANALYSIS_API_KEY` is configured.
+
+DeepSeek interprets the user's task into benchmark weights, then deterministic ranking is run only against the user's selected provider/model scope. Refreshed DB rows are merged into the effective catalog so new models and scores can appear without a code change; curated JSON remains the reviewable fallback. Artificial Analysis data requires attribution to [artificialanalysis.ai](https://artificialanalysis.ai/).
+
+Manual refreshes are still useful for source-backed editorial updates. Use `docs/model-catalog/2026-05-04-manual-refresh-runbook.md` when changing curated JSON.
 
 ## Deployment
 
-Deploy on Vercel after linking the GitHub repository. Add the environment variables above in Vercel Project Settings. Recommendation ranking is not refreshed by a nightly live benchmark job; update the curated JSON catalog through the manual refresh runbook when provider or benchmark facts change.
+Deploy on Vercel after linking the GitHub repository. Add the environment variables above in Vercel Project Settings. Vercel Cron runs the benchmark refresh weekly on Monday at 02:00 UTC; curated JSON can still be updated manually when provider facts or editorial priors need review.

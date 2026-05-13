@@ -160,6 +160,22 @@ describe("recommend and compare API routes", () => {
     });
   });
 
+  it("still returns recommendations when query audit logging fails", async () => {
+    mockQueryCreate.mockRejectedValueOnce(new Error("audit schema drift"));
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({ task: "Pick a reasoning model." }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.recommendations.length).toBeGreaterThan(0);
+  });
+
   it("applies recommendation preferences before ranking", async () => {
     mockInterpretTask.mockResolvedValue({
       refused: false,
@@ -194,6 +210,58 @@ describe("recommend and compare API routes", () => {
         expect.objectContaining({ label: "cost_efficiency" }),
       ]),
     );
+  });
+
+  it("returns three scoped recommendation tiers for selected providers and models", async () => {
+    mockInterpretTask.mockResolvedValue({
+      refused: false,
+      dimensions: {
+        reasoning: 0.5,
+        coding: 1,
+        math: 0,
+        instruction_following: 0.35,
+        overall: 0.25,
+        speed: 0,
+        cost_efficiency: 0,
+      },
+      summary: "A coding task with some reasoning.",
+    });
+    const { POST } = await import("@/app/api/recommend/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/recommend", {
+        method: "POST",
+        body: JSON.stringify({
+          task: "Pick from my OpenAI account or DeepSeek V4 Pro.",
+          preferences: {
+            preferFrontier: false,
+            preferredProviders: ["OpenAI"],
+            preferredModels: ["deepseek-v4-pro"],
+          },
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.recommendationTiers.map((tier: { id: string }) => tier.id)).toEqual([
+      "no_holds_barred",
+      "balanced",
+      "budget",
+    ]);
+    expect(body.catalogScope).toEqual(
+      expect.objectContaining({
+        selectedProviders: ["OpenAI"],
+        selectedModels: ["deepseek-v4-pro"],
+      }),
+    );
+    expect(
+      body.recommendationTiers.every(
+        (tier: { recommendation: { model: { provider: string; name: string } } }) =>
+          tier.recommendation.model.provider === "OpenAI" ||
+          tier.recommendation.model.name === "DeepSeek V4 Pro",
+      ),
+    ).toBe(true);
   });
 
   it("applies long-context preferences before ranking", async () => {
@@ -317,7 +385,7 @@ describe("recommend and compare API routes", () => {
     expect(recommendationNames).not.toContain("GPT-4.1");
   });
 
-  it("returns curated catalog models from the model catalog API", async () => {
+  it("returns curated catalog models and provider groups from the model catalog API", async () => {
     mockModelFindMany.mockResolvedValue([
       {
         name: "Benchmark Only Model",
@@ -351,8 +419,19 @@ describe("recommend and compare API routes", () => {
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
+      providers: expect.arrayContaining([
+        expect.objectContaining({
+          name: "OpenAI",
+          modelCount: expect.any(Number),
+        }),
+        expect.objectContaining({
+          name: "Anthropic",
+          modelCount: expect.any(Number),
+        }),
+      ]),
       models: expect.arrayContaining([
         expect.objectContaining({
+          id: "gpt-5-5",
           name: "GPT-5.5",
           provider: "OpenAI",
           hasBenchmarks: true,
@@ -371,7 +450,7 @@ describe("recommend and compare API routes", () => {
       body.models.some(
         (model: { name: string }) => model.name === "Benchmark Only Model",
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       body.models.some(
         (model: { name: string }) => model.name === "Old Unbenchmarked Artifact",
@@ -382,7 +461,7 @@ describe("recommend and compare API routes", () => {
         model.name.startsWith("https://huggingface.co/"),
       ),
     ).toBe(false);
-    expect(mockModelFindMany).not.toHaveBeenCalled();
+    expect(mockModelFindMany).toHaveBeenCalled();
   });
 
   it("lets the admin request recommendations without consuming rate limit quota", async () => {
@@ -407,7 +486,7 @@ describe("recommend and compare API routes", () => {
     expect(mockInterpretTask).toHaveBeenCalled();
   });
 
-  it("does not use live DB rows as the recommendation authority", async () => {
+  it("uses live benchmark rows from the weekly refresh as recommendation candidates", async () => {
     mockModelFindMany.mockResolvedValue([
       {
         name: "Catalog Only",
@@ -427,7 +506,7 @@ describe("recommend and compare API routes", () => {
           {
             source: "livebench",
             dimension: "reasoning",
-            score: 0.8,
+            score: 100,
             rawLabel: null,
           },
         ],
@@ -438,7 +517,10 @@ describe("recommend and compare API routes", () => {
     const response = await POST(
       new Request("http://localhost/api/recommend", {
         method: "POST",
-        body: JSON.stringify({ task: "Pick a reasoning model." }),
+        body: JSON.stringify({
+          task: "Pick a reasoning model.",
+          preferences: { preferFrontier: false },
+        }),
       }),
     );
 
@@ -450,7 +532,7 @@ describe("recommend and compare API routes", () => {
         (entry: { model: { name: string } }) =>
           entry.model.name === "Benchmarked Model",
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("returns catalog evidence instead of live benchmark artifacts", async () => {
@@ -693,7 +775,7 @@ describe("recommend and compare API routes", () => {
         weightedScore: expect.any(Number),
       }),
     );
-    expect(mockModelFindMany).not.toHaveBeenCalled();
+    expect(mockModelFindMany).toHaveBeenCalled();
     expect(mockLimit).toHaveBeenCalledWith("user:user_1:ip:203.0.113.10");
     expect(mockQueryCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -899,7 +981,7 @@ describe("recommend and compare API routes", () => {
     );
   });
 
-  it("rejects comparison when a requested model is not in the curated catalog", async () => {
+  it("rejects comparison when a requested model is not in the effective catalog", async () => {
     const { POST } = await import("@/app/api/compare/route");
 
     const response = await POST(
@@ -907,7 +989,7 @@ describe("recommend and compare API routes", () => {
         method: "POST",
         body: JSON.stringify({
           task: "Pick a reasoning model.",
-          modelNames: ["Model A", "GPT-5.5"],
+          modelNames: ["Not A Model", "GPT-5.5"],
         }),
       }),
     );

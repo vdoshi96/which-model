@@ -11,10 +11,10 @@ export default async function HomePage() {
   }
 
   return (
-    <section className="grid min-h-[calc(100vh-8rem)] gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-      <div className="flex flex-col justify-center">
+    <section className="grid min-h-[calc(100vh-8rem)] min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="flex min-w-0 flex-col justify-center">
         <div className="mb-6 max-w-3xl">
-          <h1 className="text-3xl font-semibold leading-[1.04] text-primary sm:text-5xl">
+          <h1 className="break-words text-3xl font-semibold leading-[1.04] text-primary sm:text-5xl">
             Match a task to the right model.
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-secondary">
@@ -24,7 +24,7 @@ export default async function HomePage() {
         </div>
         <TaskInput />
       </div>
-      <div className="flex items-center">
+      <div className="flex min-w-0 items-center">
         <EvidencePreview className="w-full" />
       </div>
     </section>

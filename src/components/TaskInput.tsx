@@ -1,17 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ModelSelector } from "@/components/ModelSelector";
+import { CatalogScopeSelector } from "@/components/CatalogScopeSelector";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import {
   defaultRecommendationPreferences,
   type RecommendationPreferences,
 } from "@/lib/recommendation/preferences";
-import { parseRecommendationModelNames } from "@/lib/recommendationCache";
-import type { ApiError, ModelsResponse, RecommendResponse } from "@/types/api";
+import { serializeRecommendationCache } from "@/lib/recommendationCache";
+import type {
+  ApiError,
+  ModelCatalogItem,
+  ModelProviderGroup,
+  ModelsResponse,
+  RecommendResponse,
+} from "@/types/api";
 
 const MAX_TASK_LENGTH = 500;
 const RECOMMENDATION_STORAGE_KEY = "which-model:last-recommendation";
@@ -39,29 +45,7 @@ const PREFERENCE_CONTROLS: Array<{
 const checkboxClassName =
   "h-4 w-4 rounded border-border bg-soft accent-accent focus:ring-0";
 
-function readStoredModelNames() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const sessionNames = parseRecommendationModelNames(
-    window.sessionStorage.getItem(RECOMMENDATION_STORAGE_KEY),
-  );
-
-  if (sessionNames.length > 0) {
-    return sessionNames;
-  }
-
-  return parseRecommendationModelNames(
-    window.localStorage.getItem(COMPARE_RECOMMENDATIONS_STORAGE_KEY),
-  );
-}
-
-function uniqueModelNames(names: string[]) {
-  return Array.from(new Set(names.filter(Boolean)));
-}
-
-async function fetchCatalogModelNames() {
+async function fetchCatalog() {
   const response = await fetch("/api/models");
 
   if (!response.ok) {
@@ -69,7 +53,15 @@ async function fetchCatalogModelNames() {
   }
 
   const payload = (await response.json()) as ModelsResponse;
-  return payload.models.map((model) => model.name);
+  const models = payload.models.map((model) => ({
+    ...model,
+    id: model.id ?? model.name,
+  }));
+
+  return {
+    models,
+    providers: payload.providers ?? buildProviderGroups(models),
+  };
 }
 
 function getErrorMessage(payload: unknown, fallback: string) {
@@ -90,13 +82,51 @@ export function TaskInput() {
   const [task, setTask] = useState("");
   const [error, setError] = useState("");
   const [apiError, setApiError] = useState("");
+  const [catalogError, setCatalogError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [compareSpecific, setCompareSpecific] = useState(false);
-  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [modelOptions, setModelOptions] = useState<ModelCatalogItem[]>([]);
+  const [providerOptions, setProviderOptions] = useState<ModelProviderGroup[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [preferences, setPreferences] = useState<RecommendationPreferences>(
     defaultRecommendationPreferences,
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCatalog() {
+      try {
+        const catalog = await fetchCatalog();
+
+        if (cancelled) {
+          return;
+        }
+
+        setModelOptions(catalog.models);
+        setProviderOptions(catalog.providers);
+      } catch (requestError) {
+        if (!cancelled) {
+          setCatalogError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Could not load model catalog.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCatalogLoading(false);
+        }
+      }
+    }
+
+    void loadCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function updatePreference(
     key: keyof RecommendationPreferences,
@@ -108,38 +138,16 @@ export function TaskInput() {
     }));
   }
 
-  async function loadModelOptions() {
-    const storedModelNames = readStoredModelNames();
-
-    setModelOptions(storedModelNames);
-
-    try {
-      const catalogModelNames = await fetchCatalogModelNames();
-      setModelOptions(uniqueModelNames([...storedModelNames, ...catalogModelNames]));
-    } catch {
-      setModelOptions(storedModelNames);
-    }
-  }
-
   async function handleSubmit() {
     const trimmedTask = task.trim();
 
-    if (!trimmedTask) {
-      setError("Describe the task first.");
+    if (selectedProviders.length === 0 && selectedModels.length === 0) {
+      setError("Pick at least one provider or model first.");
       return;
     }
 
-    if (compareSpecific && selectedModels.length >= 2) {
-      window.localStorage.setItem(COMPARE_TASK_STORAGE_KEY, trimmedTask);
-      window.localStorage.setItem(
-        COMPARE_RECOMMENDATIONS_STORAGE_KEY,
-        JSON.stringify(selectedModels),
-      );
-      const params = new URLSearchParams({
-        models: selectedModels.join(","),
-        task: trimmedTask,
-      });
-      router.push(`/compare?${params.toString()}`);
+    if (!trimmedTask) {
+      setError("Describe the task first.");
       return;
     }
 
@@ -147,8 +155,13 @@ export function TaskInput() {
     setIsLoading(true);
 
     try {
+      const scopedPreferences = {
+        ...preferences,
+        preferredProviders: selectedProviders,
+        preferredModels: selectedModels,
+      };
       const response = await fetch("/api/recommend", {
-        body: JSON.stringify({ task: trimmedTask, preferences }),
+        body: JSON.stringify({ task: trimmedTask, preferences: scopedPreferences }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
@@ -162,7 +175,7 @@ export function TaskInput() {
 
       window.sessionStorage.setItem(
         RECOMMENDATION_STORAGE_KEY,
-        JSON.stringify(payload),
+        serializeRecommendationCache(trimmedTask, payload as RecommendResponse),
       );
       window.localStorage.setItem(COMPARE_TASK_STORAGE_KEY, trimmedTask);
       window.localStorage.setItem(
@@ -188,19 +201,45 @@ export function TaskInput() {
   }
 
   return (
-    <div className="rounded-[8px] border border-border-strong bg-surface p-4 shadow-[var(--shadow-soft)] sm:p-5">
+    <div className="min-w-0 rounded-[8px] border border-border-strong bg-surface p-4 shadow-[var(--shadow-soft)] sm:p-5">
       {apiError ? (
         <div className="mb-4 rounded-[6px] border border-danger/70 bg-danger/10 p-3 text-sm text-danger">
           {apiError}
         </div>
       ) : null}
       <div className="space-y-3">
+        <p className="font-mono text-sm font-semibold uppercase text-primary">
+          1. Pick providers or models
+        </p>
+        {catalogError ? (
+          <div className="rounded-[6px] border border-warning/70 bg-warning/10 p-3 text-sm text-warning">
+            {catalogError}
+          </div>
+        ) : null}
+        <CatalogScopeSelector
+          isLoading={isCatalogLoading}
+          models={modelOptions}
+          onModelsChange={(models) => {
+            setSelectedModels(models);
+            setError("");
+          }}
+          onProvidersChange={(providers) => {
+            setSelectedProviders(providers);
+            setError("");
+          }}
+          providers={providerOptions}
+          selectedModels={selectedModels}
+          selectedProviders={selectedProviders}
+        />
+      </div>
+
+      <div className="mt-5 space-y-3 border-t border-border pt-5">
         <div className="flex items-center justify-between gap-3">
           <label
             className="font-mono text-sm font-semibold uppercase text-primary"
             htmlFor="task-input"
           >
-            1. Describe your task
+            2. Describe your task
           </label>
           <span className="font-mono text-xs text-muted" id="task-counter">
             {task.length}/{MAX_TASK_LENGTH}
@@ -223,7 +262,7 @@ export function TaskInput() {
 
       <div className="mt-5 border-t border-border pt-5">
         <p className="font-mono text-sm font-semibold uppercase text-primary">
-          2. Preferences
+          3. Preferences
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {PREFERENCE_CONTROLS.map((control) => (
@@ -245,45 +284,9 @@ export function TaskInput() {
         </div>
       </div>
 
-      <div className="mt-5 border-t border-border pt-5">
-        <label className="flex cursor-pointer items-center gap-3 text-sm text-secondary">
-          <input
-            checked={compareSpecific}
-            className={checkboxClassName}
-            onChange={(event) => {
-              const checked = event.target.checked;
-
-              setCompareSpecific(checked);
-              if (checked && modelOptions.length === 0) {
-                void loadModelOptions();
-              }
-            }}
-            type="checkbox"
-          />
-          <span>Compare specific models</span>
-        </label>
-        {compareSpecific ? (
-          <div className="mt-4">
-            {modelOptions.length > 0 ? (
-              <ModelSelector
-                models={modelOptions}
-                onChange={setSelectedModels}
-                selectedModels={selectedModels}
-              />
-            ) : (
-              <div className="rounded-[6px] border border-border bg-soft p-4 text-sm text-secondary">
-                Run a recommendation once to populate model choices, then return
-                here to select specific models.
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
-
       <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm leading-6 text-secondary">
-          Recommendations use weighted benchmark signals and preserve evidence
-          gaps.
+          The three picks are limited to the providers and models selected above.
         </p>
         <Button className="w-full sm:w-auto" disabled={isLoading} onClick={handleSubmit}>
           {isLoading ? (
@@ -293,7 +296,7 @@ export function TaskInput() {
             </span>
           ) : (
             <span className="inline-flex items-center gap-2">
-              {compareSpecific ? "Compare Selected Models" : "Find Best Models"}
+              Analyze Selected Models
               <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 20 20">
                 <path
                   d="M4 10h11M11 6l4 4-4 4"
@@ -309,4 +312,24 @@ export function TaskInput() {
       </div>
     </div>
   );
+}
+
+function buildProviderGroups(models: ModelCatalogItem[]) {
+  return Array.from(
+    models.reduce((groups, model) => {
+      const current = groups.get(model.provider) ?? {
+        name: model.provider,
+        modelCount: 0,
+        benchmarkedCount: 0,
+      };
+
+      current.modelCount += 1;
+      current.benchmarkedCount += model.hasBenchmarks ? 1 : 0;
+      groups.set(model.provider, current);
+
+      return groups;
+    }, new Map<string, ModelProviderGroup>()),
+  )
+    .map(([, provider]) => provider)
+    .sort((left, right) => left.name.localeCompare(right.name));
 }

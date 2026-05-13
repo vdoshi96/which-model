@@ -336,18 +336,17 @@ function applyPreferenceFilters(
     preferences.infrastructure.map(normalizePreferenceValue),
   );
 
-  if (preferredProviders.size > 0) {
-    filtered = filtered.filter((model) =>
-      preferredProviders.has(normalizePreferenceValue(model.provider)),
-    );
-  }
-
-  if (preferredModels.size > 0) {
-    filtered = filtered.filter((model) =>
-      getModelLookupValues(model).some((value) =>
+  if (preferredProviders.size > 0 || preferredModels.size > 0) {
+    filtered = filtered.filter((model) => {
+      const providerMatches = preferredProviders.has(
+        normalizePreferenceValue(model.provider),
+      );
+      const modelMatches = getModelLookupValues(model).some((value) =>
         preferredModels.has(normalizePreferenceValue(value)),
-      ),
-    );
+      );
+
+      return providerMatches || modelMatches;
+    });
   }
 
   if (preferredInfrastructure.size > 0) {

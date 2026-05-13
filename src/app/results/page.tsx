@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { DimensionWeights } from "@/components/DimensionWeights";
 import { RankingList } from "@/components/RankingList";
+import { RecommendationTiers } from "@/components/RecommendationTiers";
 import { Button } from "@/components/ui/Button";
 import {
   parseRecommendationCache,
@@ -192,6 +193,21 @@ function ResultsPageContent() {
           </div>
 
           <DimensionWeights dimensions={result.dimensions} />
+
+          {result.recommendationTiers ? (
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  Three recommendation modes
+                </h2>
+                <p className="mt-1 text-sm text-secondary">
+                  Each pick is constrained to the providers and models selected
+                  before analysis.
+                </p>
+              </div>
+              <RecommendationTiers tiers={result.recommendationTiers} />
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-3 rounded-[8px] border border-border bg-soft p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

@@ -11,9 +11,10 @@ describe("refresh benchmarks cron route", () => {
   beforeEach(() => {
     jest.resetModules();
     mockRefreshBenchmarkData.mockReset().mockResolvedValue({
-      modelsProcessed: 24,
-      scoresProcessed: 96,
-      errors: [],
+      recordsFetched: 120,
+      modelsUpserted: 24,
+      scoresUpserted: 96,
+      scoresDeleted: 0,
     });
   });
 
@@ -42,7 +43,7 @@ describe("refresh benchmarks cron route", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 410 and does not update ranking data when authorized", async () => {
+  it("updates benchmark data when authorized", async () => {
     process.env.CRON_SECRET = "test-secret";
     const { GET } = await import("@/app/api/cron/refresh-benchmarks/route");
 
@@ -52,12 +53,14 @@ describe("refresh benchmarks cron route", () => {
       }),
     );
 
-    expect(response.status).toBe(410);
+    expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      ok: false,
-      error:
-        "Automatic benchmark refresh is disabled. Use the manual curated catalog refresh runbook.",
+      ok: true,
+      recordsFetched: 120,
+      modelsUpserted: 24,
+      scoresUpserted: 96,
+      scoresDeleted: 0,
     });
-    expect(mockRefreshBenchmarkData).not.toHaveBeenCalled();
+    expect(mockRefreshBenchmarkData).toHaveBeenCalledTimes(1);
   });
 });

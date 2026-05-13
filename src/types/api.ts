@@ -15,9 +15,24 @@ export interface RecommendRequest {
   task: string;
 }
 
+export interface RecommendationTier {
+  id: "no_holds_barred" | "balanced" | "budget";
+  label: string;
+  description: string;
+  recommendation: RankedModel | null;
+}
+
+export interface RecommendationCatalogScope {
+  selectedProviders: string[];
+  selectedModels: string[];
+  candidateCount: number;
+}
+
 export interface RecommendResponse {
   taskSummary: string;
   dimensions: TaskDimensions;
+  recommendationTiers?: RecommendationTier[];
+  catalogScope?: RecommendationCatalogScope;
   recommendations: RankedModel[];
 }
 
@@ -51,15 +66,24 @@ export interface CompareResponse {
 }
 
 export interface ModelCatalogItem {
+  id: string;
   name: string;
   provider: string;
   contextWindow: number | null;
   costInputPer1M: number | null;
   costOutputPer1M: number | null;
+  effortLevel?: string | null;
   hasBenchmarks: boolean;
   status: string;
 }
 
+export interface ModelProviderGroup {
+  name: string;
+  modelCount: number;
+  benchmarkedCount: number;
+}
+
 export interface ModelsResponse {
+  providers: ModelProviderGroup[];
   models: ModelCatalogItem[];
 }

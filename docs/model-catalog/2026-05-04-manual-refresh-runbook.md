@@ -2,7 +2,7 @@
 
 Date: 2026-05-04
 
-Use this runbook when refreshing recommendation data. Recommendations now come from the curated JSON catalog and deterministic ranking code, not from a nightly live ranking refresh.
+Use this runbook when refreshing curated recommendation data. Recommendations now come from an effective catalog: curated JSON plus the weekly benchmark refresh cache. Manual edits remain the review path for source-backed model metadata, priors, and benchmark definitions.
 
 ## Scope
 
