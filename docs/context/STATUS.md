@@ -26,10 +26,11 @@ Last verification:
 - `corepack pnpm build`
 - Browser plugin QA on `http://localhost:3000`: authenticated home selector, desktop result flow, and 390px mobile home viewport.
 - Vercel production/preview env check: required database, auth, DeepSeek, Upstash, cron, admin, query-audit, and Artificial Analysis variables are present; secrets are stored as sensitive.
+- Deployed refresh check on `https://which-model.vercel.app/api/cron/refresh-benchmarks`: 3,785 records fetched, 902 models upserted, 3,785 scores upserted, 141 stale scores deleted.
 
 Next checks:
 
-- Run a real scheduled refresh in the deployed environment after the post-env redeploy is ready.
+- Watch the next scheduled Monday refresh for source/parser drift.
 
 Known issues:
 
