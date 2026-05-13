@@ -54,4 +54,24 @@ describe("rankRecommendationTiers", () => {
     expect(tiers.find((tier) => tier.id === "budget")?.recommendation?.model.name)
       .toBe("DeepSeek V4 Pro");
   });
+
+  it("keeps task fit stable when the same model appears in multiple decision modes", () => {
+    const tiers = rankRecommendationTiers({
+      catalog: loadCuratedCatalog(),
+      intent: codingIntent,
+      preferences: {
+        ...defaultRecommendationPreferences,
+        preferFrontier: false,
+        preferredModels: ["deepseek-v4-pro"],
+      },
+    });
+    const recommendedTiers = tiers.filter((tier) => tier.recommendation);
+
+    expect(
+      recommendedTiers.map((tier) => tier.recommendation?.model.name),
+    ).toEqual(["DeepSeek V4 Pro", "DeepSeek V4 Pro", "DeepSeek V4 Pro"]);
+    expect(new Set(recommendedTiers.map((tier) => tier.taskScore)).size).toBe(1);
+    expect(new Set(recommendedTiers.map((tier) => tier.selectionScore)).size)
+      .toBeGreaterThan(1);
+  });
 });

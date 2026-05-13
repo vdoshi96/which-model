@@ -7,6 +7,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BenchmarkBadge } from "@/components/BenchmarkBadge";
 import { ModelCard } from "@/components/ModelCard";
 import { RankingList } from "@/components/RankingList";
+import { RecommendationTiers } from "@/components/RecommendationTiers";
 import { SplashScreen } from "@/components/SplashScreen";
 import { TaskInput } from "@/components/TaskInput";
 import ResultsPage from "@/app/results/page";
@@ -69,12 +70,13 @@ describe("BenchmarkBadge", () => {
 });
 
 describe("ModelCard", () => {
-  it("shows rank, model identity, weighted score, benchmark badges, cost, and context", () => {
+  it("shows rank, model identity, selection score, benchmark badges, cost, and context", () => {
     render(<ModelCard recommendation={recommendation} />);
 
     expect(screen.getByText("#1")).toBeInTheDocument();
     expect(screen.getByText("Claude 3.5 Sonnet")).toBeInTheDocument();
     expect(screen.getByText("Anthropic")).toBeInTheDocument();
+    expect(screen.getByText("Selection score")).toBeInTheDocument();
     expect(screen.getByText("0.91")).toBeInTheDocument();
     expect(screen.getByText(/LiveBench/)).toBeInTheDocument();
     expect(screen.getByText(/LMSYS Arena/)).toBeInTheDocument();
@@ -192,6 +194,41 @@ describe("ModelCard", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/measured editorial prior/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("RecommendationTiers", () => {
+  it("shows stable task fit separately from the mode-specific selection score", () => {
+    render(
+      <RecommendationTiers
+        tiers={[
+          {
+            id: "balanced",
+            label: "Best balance",
+            description: "Strong task fit with cost efficiency included.",
+            recommendation: {
+              ...recommendation,
+              score: 70,
+              model: {
+                ...recommendation.model,
+                name: "DeepSeek V4 Pro",
+                provider: "DeepSeek",
+                costInputPer1M: 0.43,
+                costOutputPer1M: 0.87,
+              },
+            },
+            taskScore: 88.74,
+            selectionScore: 70,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Task fit")).toBeInTheDocument();
+    expect(screen.getByText("88.74")).toBeInTheDocument();
+    expect(screen.getByText("Selection score")).toBeInTheDocument();
+    expect(screen.getByText("70.00")).toBeInTheDocument();
+    expect(screen.queryByText("Task score")).not.toBeInTheDocument();
   });
 });
 

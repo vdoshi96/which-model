@@ -15,6 +15,10 @@ function formatCost(input: number | null, output: number | null) {
   return `${inputCost} in / ${outputCost} out`;
 }
 
+function formatScore(score: number | null | undefined) {
+  return score === null || score === undefined ? "N/A" : score.toFixed(2);
+}
+
 export function RecommendationTiers({ tiers }: RecommendationTiersProps) {
   if (!tiers.length) {
     return null;
@@ -43,11 +47,21 @@ export function RecommendationTiers({ tiers }: RecommendationTiersProps) {
                 </p>
                 <div className="mt-4 grid gap-2 text-sm">
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-                    <span className="text-secondary">Task score</span>
+                    <span className="text-secondary">Task fit</span>
                     <span className="font-mono text-primary">
-                      {recommendation.score.toFixed(2)}
+                      {formatScore(tier.taskScore)}
                     </span>
                   </div>
+                  {tier.selectionScore !== null &&
+                  tier.taskScore !== null &&
+                  Math.abs(tier.selectionScore - tier.taskScore) >= 0.005 ? (
+                    <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+                      <span className="text-secondary">Selection score</span>
+                      <span className="font-mono text-primary">
+                        {formatScore(tier.selectionScore)}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
                     <span className="text-secondary">API cost / 1M</span>
                     <span className="text-right font-mono text-primary">

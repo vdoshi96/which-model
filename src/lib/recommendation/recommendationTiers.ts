@@ -16,6 +16,8 @@ export interface RecommendationTier {
   label: string;
   description: string;
   recommendation: RankedModel | null;
+  taskScore: number | null;
+  selectionScore: number | null;
 }
 
 const MIN_BUDGET_QUALITY_SCORE = 55;
@@ -63,20 +65,26 @@ export function rankRecommendationTiers({
     limit: catalog.models.length,
   });
 
+  const taskScoresByName = new Map(
+    qualityRanking.map((entry) => [entry.model.name, entry.score]),
+  );
+
   return [
-    {
+    buildTier({
       id: "no_holds_barred",
       label: "Best model, no holds barred",
       description: "Highest task-fit score from the selected models, ignoring token price.",
       recommendation: qualityRanking[0] ?? null,
-    },
-    {
+      taskScoresByName,
+    }),
+    buildTier({
       id: "balanced",
       label: "Best balance",
       description: "Strong task fit with cost efficiency included in the scoring.",
       recommendation: balancedRanking[0] ?? qualityRanking[0] ?? null,
-    },
-    {
+      taskScoresByName,
+    }),
+    buildTier({
       id: "budget",
       label: "Cheap and decent",
       description: "Lowest practical API cost among models that clear a quality floor.",
@@ -84,8 +92,34 @@ export function rankRecommendationTiers({
         budgetRanking,
         qualityRanking,
       }),
-    },
+      taskScoresByName,
+    }),
   ];
+}
+
+function buildTier({
+  id,
+  label,
+  description,
+  recommendation,
+  taskScoresByName,
+}: {
+  id: RecommendationTierId;
+  label: string;
+  description: string;
+  recommendation: RankedModel | null;
+  taskScoresByName: Map<string, number>;
+}): RecommendationTier {
+  return {
+    id,
+    label,
+    description,
+    recommendation,
+    taskScore: recommendation
+      ? (taskScoresByName.get(recommendation.model.name) ?? null)
+      : null,
+    selectionScore: recommendation?.score ?? null,
+  };
 }
 
 function withCostWeight(

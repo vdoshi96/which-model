@@ -20,6 +20,8 @@ export interface RecommendationTier {
   label: string;
   description: string;
   recommendation: RankedModel | null;
+  taskScore: number | null;
+  selectionScore: number | null;
 }
 
 export interface RecommendationCatalogScope {

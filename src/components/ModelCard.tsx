@@ -91,7 +91,7 @@ export function ModelCard({ recommendation }: ModelCardProps) {
         </div>
         <div className="shrink-0 sm:text-right">
           <p className="font-mono text-xs uppercase text-secondary">
-            Weighted score
+            Selection score
           </p>
           <p className="mt-1 font-mono text-3xl font-semibold text-cyan">
             {recommendation.score.toFixed(2)}
