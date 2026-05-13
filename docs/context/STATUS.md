@@ -25,12 +25,12 @@ Last verification:
 - `corepack pnpm test --runInBand`
 - `corepack pnpm build`
 - Browser plugin QA on `http://localhost:3000`: authenticated home selector, desktop result flow, and 390px mobile home viewport.
+- Vercel production/preview env check: required database, auth, DeepSeek, Upstash, cron, admin, query-audit, and Artificial Analysis variables are present; secrets are stored as sensitive.
 
 Next checks:
 
-- Run a real scheduled refresh in the deployed environment after confirming `ARTIFICIAL_ANALYSIS_API_KEY` and `CRON_SECRET` are set.
+- Run a real scheduled refresh in the deployed environment after the post-env redeploy is ready.
 
 Known issues:
 
-- Real Artificial Analysis API refresh requires `ARTIFICIAL_ANALYSIS_API_KEY`.
 - Curated effort-level variants are inferred from model names unless refreshed data provides separate variant rows.
